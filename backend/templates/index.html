@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+
+{% block title %}
+
+Home
+
+{% endblock %}
+
+
+{% block content %}
+
+<div class="container">
+
+    <img
+        src="{{ url_for('static', filename='images/logo.png') }}"
+        alt="Application Logo"
+        class="logo"
+    >
+
+
+    <h1>
+        Welcome to Flask Application
+    </h1>
+
+
+    <p>
+        Your Flask application is running successfully.
+    </p>
+
+
+    <a href="/auth/login">
+        Go to Login
+    </a>
+
+</div>
+
+{% endblock %}

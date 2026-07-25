@@ -1,0 +1,9 @@
+Flask
+Flask-Session
+Flask-SQLAlchemy
+marshmallow
+marshmallow-sqlalchemy
+gunicorn
+Werkzeug
+python-dotenv
+psycopg2-binary

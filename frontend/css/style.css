@@ -1,0 +1,155 @@
+/* =========================================
+   Global Styles
+========================================= */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    background-color: #f4f6f8;
+    color: #333333;
+    min-height: 100vh;
+}
+
+
+/* =========================================
+   Navigation Bar
+========================================= */
+
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    padding: 15px 40px;
+
+    background-color: #1f2937;
+    color: white;
+}
+
+
+/* Logo Container */
+
+.logo-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    font-size: 22px;
+    font-weight: bold;
+}
+
+
+/* Logo */
+
+.logo {
+    width: 45px;
+    height: 45px;
+
+    object-fit: contain;
+}
+
+
+/* Navigation Links */
+
+.nav-links {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+
+.nav-links a {
+    color: white;
+    text-decoration: none;
+
+    font-size: 16px;
+}
+
+
+.nav-links a:hover {
+    text-decoration: underline;
+}
+
+
+/* =========================================
+   Main Container
+========================================= */
+
+.container {
+    width: 90%;
+    max-width: 1100px;
+
+    margin: 60px auto;
+
+    text-align: center;
+}
+
+
+/* =========================================
+   Home Page
+========================================= */
+
+.container h1 {
+    font-size: 40px;
+    margin-bottom: 20px;
+}
+
+
+.container p {
+    font-size: 18px;
+    margin-bottom: 30px;
+}
+
+
+/* =========================================
+   Common Button
+========================================= */
+
+.button {
+    display: inline-block;
+
+    padding: 12px 25px;
+
+    background-color: #2563eb;
+    color: white;
+
+    text-decoration: none;
+
+    border-radius: 5px;
+
+    font-size: 16px;
+}
+
+
+.button:hover {
+    background-color: #1d4ed8;
+}
+
+
+/* =========================================
+   Responsive Design
+========================================= */
+
+@media (max-width: 768px) {
+
+    .navbar {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .nav-links {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .container h1 {
+        font-size: 30px;
+    }
+
+}

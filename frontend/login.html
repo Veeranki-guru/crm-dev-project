@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>CRM Dev - Login</title>
+
+
+    <!-- Favicon -->
+
+    <link
+        rel="icon"
+        type="image/x-icon"
+        href="images/favicon.ico"
+    >
+
+
+    <!-- Login CSS -->
+
+    <link
+        rel="stylesheet"
+        href="css/login.css"
+    >
+
+</head>
+
+
+<body>
+
+
+    <div class="login-container">
+
+
+        <!-- Logo -->
+
+        <img
+            src="images/logo.png"
+            alt="CRM Dev Logo"
+            class="logo"
+        >
+
+
+        <h2>
+            CRM Dev Login
+        </h2>
+
+
+        <!-- Login Form -->
+
+        <form
+            id="loginForm"
+        >
+
+
+            <!-- Email -->
+
+            <div class="form-group">
+
+                <label for="email">
+                    Email
+                </label>
+
+                <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    placeholder="Enter your email"
+                    required
+                >
+
+            </div>
+
+
+            <!-- Password -->
+
+            <div class="form-group">
+
+                <label for="password">
+                    Password
+                </label>
+
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    placeholder="Enter your password"
+                    required
+                >
+
+            </div>
+
+
+            <!-- Error Message -->
+
+            <p
+                id="errorMessage"
+                class="error-message"
+            >
+            </p>
+
+
+            <!-- Login Button -->
+
+            <button
+                type="submit"
+                class="login-button"
+            >
+                Login
+            </button>
+
+
+        </form>
+
+
+        <p>
+
+            Don't have an account?
+
+            <a href="index.html">
+                Go Back
+            </a>
+
+        </p>
+
+
+    </div>
+
+
+    <!-- Login JavaScript -->
+
+    <script src="js/login.js"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,190 @@
+/* =========================================
+   Login Page
+========================================= */
+
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    min-height: 100vh;
+
+    background-color: #f4f6f8;
+}
+
+
+/* =========================================
+   Login Container
+========================================= */
+
+.login-container {
+    width: 100%;
+    max-width: 400px;
+
+    padding: 35px;
+
+    background-color: white;
+
+    border-radius: 10px;
+
+    box-shadow:
+        0 4px 15px rgba(0, 0, 0, 0.1);
+
+    text-align: center;
+}
+
+
+/* =========================================
+   Logo
+========================================= */
+
+.login-container .logo {
+    width: 80px;
+    height: 80px;
+
+    object-fit: contain;
+
+    margin-bottom: 15px;
+}
+
+
+/* =========================================
+   Login Heading
+========================================= */
+
+.login-container h2 {
+    margin-bottom: 25px;
+
+    font-size: 28px;
+
+    color: #1f2937;
+}
+
+
+/* =========================================
+   Form Group
+========================================= */
+
+.form-group {
+    margin-bottom: 20px;
+
+    text-align: left;
+}
+
+
+/* =========================================
+   Labels
+========================================= */
+
+.form-group label {
+    display: block;
+
+    margin-bottom: 8px;
+
+    font-weight: bold;
+
+    color: #374151;
+}
+
+
+/* =========================================
+   Input Fields
+========================================= */
+
+.form-group input {
+    width: 100%;
+
+    padding: 12px;
+
+    border: 1px solid #d1d5db;
+
+    border-radius: 5px;
+
+    font-size: 16px;
+
+    outline: none;
+}
+
+
+/* Input Focus */
+
+.form-group input:focus {
+    border-color: #2563eb;
+
+    box-shadow:
+        0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+
+/* =========================================
+   Login Button
+========================================= */
+
+.login-button {
+    width: 100%;
+
+    padding: 12px;
+
+    border: none;
+
+    border-radius: 5px;
+
+    background-color: #2563eb;
+
+    color: white;
+
+    font-size: 16px;
+
+    cursor: pointer;
+}
+
+
+.login-button:hover {
+    background-color: #1d4ed8;
+}
+
+
+/* =========================================
+   Error Message
+========================================= */
+
+.error-message {
+    min-height: 20px;
+
+    margin-bottom: 15px;
+
+    color: #dc2626;
+
+    font-size: 14px;
+}
+
+
+/* =========================================
+   Login Page Links
+========================================= */
+
+.login-container a {
+    color: #2563eb;
+
+    text-decoration: none;
+}
+
+
+.login-container a:hover {
+    text-decoration: underline;
+}
+
+
+/* =========================================
+   Responsive Design
+========================================= */
+
+@media (max-width: 480px) {
+
+    .login-container {
+        width: 90%;
+
+        padding: 25px;
+    }
+
+}
