@@ -5,7 +5,7 @@ set -e
 APP_VERSION="$1"
 
 if [ -z "$APP_VERSION" ]; then
-    echo "ERROR: APP_VERSION is required."
+    echo "ERROR: APP_VERSION is required"
     echo "Usage: $0 <version>"
     exit 1
 fi
@@ -13,11 +13,7 @@ fi
 PROJECT_NAME="crm-dev"
 ARTIFACT_NAME="${PROJECT_NAME}-${APP_VERSION}.tar.gz"
 
-echo "=========================================="
-echo "Creating Application Artifact"
-echo "Version: $APP_VERSION"
-echo "Artifact: $ARTIFACT_NAME"
-echo "=========================================="
+echo "Creating artifact: $ARTIFACT_NAME"
 
 rm -f "$ARTIFACT_NAME"
 
@@ -29,9 +25,9 @@ tar \
     backend frontend scripts
 
 if [ ! -f "$ARTIFACT_NAME" ]; then
-    echo "ERROR: Artifact creation failed."
+    echo "ERROR: Artifact creation failed"
     exit 1
 fi
 
 echo "Artifact created successfully:"
-echo "$ARTIFACT_NAME"
+ls -lh "$ARTIFACT_NAME"

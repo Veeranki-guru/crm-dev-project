@@ -11,7 +11,7 @@ pipeline {
     }
 
     environment {
-        NEXUS_URL = 'http://YOUR-NEXUS-IP:8081'
+        NEXUS_URL = 'http://localhost:8081'
         NEXUS_REPOSITORY = 'crm-dev-releases'
     }
 
@@ -90,8 +90,10 @@ pipeline {
 
     post {
         success {
+            echo "======================================"
             echo "CI PIPELINE SUCCESS"
             echo "Version: ${params.APP_VERSION}"
+            echo "======================================"
         }
 
         failure {
