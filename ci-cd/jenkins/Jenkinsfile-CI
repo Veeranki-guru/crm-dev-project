@@ -11,7 +11,7 @@ pipeline {
     }
 
     environment {
-        NEXUS_URL = 'http://localhost:8081'
+        NEXUS_URL = 'http://YOUR-NEXUS-IP:8081'
         NEXUS_REPOSITORY = 'crm-dev-releases'
     }
 
@@ -25,7 +25,7 @@ pipeline {
 
         stage('Show Version') {
             steps {
-                echo "Building version: ${params.APP_VERSION}"
+                echo "Application Version: ${params.APP_VERSION}"
             }
         }
 
@@ -69,9 +69,7 @@ pipeline {
 
         stage('Package') {
             steps {
-                sh """
-                    bash ci-cd/ci/artifact.sh ${params.APP_VERSION}
-                """
+                sh "bash ci-cd/ci/artifact.sh ${params.APP_VERSION}"
             }
         }
 
@@ -84,9 +82,7 @@ pipeline {
                         passwordVariable: 'NEXUS_PASSWORD'
                     )
                 ]) {
-                    sh """
-                        bash ci-cd/ci/upload-artifact.sh ${params.APP_VERSION}
-                    """
+                    sh "bash ci-cd/ci/upload-artifact.sh ${params.APP_VERSION}"
                 }
             }
         }
@@ -94,13 +90,12 @@ pipeline {
 
     post {
         success {
-            echo "CI SUCCESS"
-            echo "Application: crm-dev"
+            echo "CI PIPELINE SUCCESS"
             echo "Version: ${params.APP_VERSION}"
         }
 
         failure {
-            echo "CI FAILED"
+            echo "CI PIPELINE FAILED"
         }
     }
 }

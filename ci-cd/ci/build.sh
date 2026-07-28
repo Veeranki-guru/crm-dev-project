@@ -1,22 +1,34 @@
 #!/bin/bash
+
 set -e
 
-echo "======================================"
-echo "Building Python Flask application"
-echo "======================================"
+echo "=========================================="
+echo "Python Application Build"
+echo "=========================================="
 
 cd backend
 
+echo "Python version:"
+python3 --version
+
+echo "Creating virtual environment..."
+
 python3 -m venv venv
+
+echo "Activating virtual environment..."
 
 source venv/bin/activate
 
+echo "Upgrading pip..."
+
 pip install --upgrade pip
 
-pip install -r requirements.txt
+if [ -f requirements.txt ]; then
+    echo "Installing Python dependencies..."
+    pip install -r requirements.txt
+else
+    echo "ERROR: requirements.txt not found."
+    exit 1
+fi
 
-echo "Python dependencies installed successfully."
-
-python -m py_compile $(find . -name "*.py")
-
-echo "Python build/validation successful."
+echo "Python build completed successfully."

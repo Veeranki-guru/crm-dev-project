@@ -2,70 +2,136 @@
 
 set -e
 
-LOG_FILE="/tmp/install-nexus.log"
+# ============================================================
+# Nexus Configuration
+# ============================================================
 
-VALIDATE() {
-    if [ $1 -eq 0 ]; then
-        echo "$2 ... SUCCESS"
+NEXUS_VERSION="3.94.1-06"
+NEXUS_USER="nexus"
+NEXUS_HOME="/opt/nexus"
+NEXUS_TAR="nexus-${NEXUS_VERSION}-unix.tar.gz"
+NEXUS_URL="https://download.sonatype.com/nexus/3/${NEXUS_TAR}"
+
+echo "=========================================="
+echo "Nexus Installation Started"
+echo "=========================================="
+
+# ============================================================
+# 1. Check if Nexus is already installed
+# ============================================================
+
+if [ -d "$NEXUS_HOME" ]; then
+
+    echo "Nexus is already installed at $NEXUS_HOME"
+    echo "Skipping Nexus installation."
+
+    if systemctl is-active --quiet nexus; then
+        echo "Nexus service is already running."
     else
-        echo "$2 ... FAILURE"
-        echo "Check log: $LOG_FILE"
-        exit 1
+        echo "Nexus is installed but service is not running."
+        echo "You can start it using:"
+        echo "sudo systemctl start nexus"
     fi
-}
 
-echo "========================================="
-echo "      Nexus Installation Started"
-echo "========================================="
-
-# Check root user
-if [ "$(id -u)" -ne 0 ]; then
-    echo "Please run this script as root or with sudo."
-    exit 1
+    exit 0
 fi
 
-echo "Installing Java 21..."
+# ============================================================
+# 2. Install required packages
+# ============================================================
 
-dnf install -y java-21-openjdk java-21-openjdk-devel wget tar &>>"$LOG_FILE"
-VALIDATE $? "Java Installation"
+echo "Installing required packages..."
 
-echo "Creating Nexus User..."
+sudo dnf install -y java-21-openjdk wget tar
 
-id nexus &>/dev/null || useradd nexus
-VALIDATE $? "Nexus User Creation"
+# ============================================================
+# 3. Create Nexus user
+# ============================================================
 
-echo "Downloading Nexus Repository Manager..."
+if id "$NEXUS_USER" &>/dev/null; then
+    echo "User $NEXUS_USER already exists."
+else
+    echo "Creating user $NEXUS_USER..."
+    sudo useradd --system --no-create-home "$NEXUS_USER"
+fi
+
+# ============================================================
+# 4. Download Nexus
+# ============================================================
 
 cd /opt
 
-wget -O nexus.tar.gz \
-https://download.sonatype.com/nexus/3/latest-unix.tar.gz &>>"$LOG_FILE"
-VALIDATE $? "Nexus Download"
+echo "Downloading Nexus ${NEXUS_VERSION}..."
+
+if [ -f "$NEXUS_TAR" ]; then
+    echo "$NEXUS_TAR already exists."
+else
+    sudo wget "$NEXUS_URL"
+fi
+
+# ============================================================
+# 5. Check downloaded file
+# ============================================================
+
+if [ ! -f "/opt/$NEXUS_TAR" ]; then
+    echo "ERROR: Nexus download failed."
+    exit 1
+fi
+
+echo "Nexus download successful."
+
+# ============================================================
+# 6. Extract Nexus
+# ============================================================
 
 echo "Extracting Nexus..."
 
-tar -xzf nexus.tar.gz &>>"$LOG_FILE"
-VALIDATE $? "Nexus Extraction"
+sudo tar -xzf "/opt/$NEXUS_TAR"
 
-NEXUS_DIR=$(find /opt -maxdepth 1 -type d -name "nexus-*" | head -1)
+# ============================================================
+# 7. Find extracted Nexus directory
+# ============================================================
 
-mv "$NEXUS_DIR" /opt/nexus
-VALIDATE $? "Move Nexus"
+NEXUS_DIR=$(find /opt -maxdepth 1 -type d -name "nexus-*" ! -name "nexus" | head -1)
 
-mkdir -p /opt/sonatype-work
+if [ -z "$NEXUS_DIR" ]; then
+    echo "ERROR: Nexus extracted directory not found."
+    exit 1
+fi
 
-chown -R nexus:nexus /opt/nexus
-chown -R nexus:nexus /opt/sonatype-work
+echo "Nexus extracted directory found:"
+echo "$NEXUS_DIR"
 
-echo "Configuring Nexus..."
+# ============================================================
+# 8. Rename Nexus directory
+# ============================================================
 
-sed -i 's/^#run_as_user=""/run_as_user="nexus"/' /opt/nexus/bin/nexus.rc
+if [ -d "$NEXUS_HOME" ]; then
+    echo "ERROR: $NEXUS_HOME already exists."
+    exit 1
+fi
 
-VALIDATE $? "Nexus Configuration"
+sudo mv "$NEXUS_DIR" "$NEXUS_HOME"
 
-echo "Creating systemd service..."
+# ============================================================
+# 9. Set ownership
+# ============================================================
 
-cat >/etc/systemd/system/nexus.service <<EOF
+sudo chown -R "$NEXUS_USER:$NEXUS_USER" "$NEXUS_HOME"
+
+# ============================================================
+# 10. Configure Nexus
+# ============================================================
+
+sudo mkdir -p /opt/sonatype-work
+
+sudo chown -R "$NEXUS_USER:$NEXUS_USER" /opt/sonatype-work
+
+# ============================================================
+# 11. Create Nexus systemd service
+# ============================================================
+
+sudo tee /etc/systemd/system/nexus.service > /dev/null <<EOF
 [Unit]
 Description=Nexus Repository Manager
 After=network.target
@@ -73,43 +139,42 @@ After=network.target
 [Service]
 Type=forking
 LimitNOFILE=65536
-User=nexus
-Group=nexus
-ExecStart=/opt/nexus/bin/nexus start
-ExecStop=/opt/nexus/bin/nexus stop
+User=$NEXUS_USER
+Group=$NEXUS_USER
+ExecStart=$NEXUS_HOME/bin/nexus start
+ExecStop=$NEXUS_HOME/bin/nexus stop
 Restart=on-abort
+TimeoutSec=600
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
-VALIDATE $? "Service File"
+# ============================================================
+# 12. Enable and start Nexus
+# ============================================================
 
-echo "Reloading systemd..."
+echo "Starting Nexus service..."
 
-systemctl daemon-reload
+sudo systemctl daemon-reload
+sudo systemctl enable nexus
+sudo systemctl start nexus
 
-echo "Enabling Nexus..."
+# ============================================================
+# 13. Check Nexus service
+# ============================================================
 
-systemctl enable nexus &>>"$LOG_FILE"
-VALIDATE $? "Enable Nexus"
+sleep 10
 
-echo "Starting Nexus..."
-
-systemctl start nexus &>>"$LOG_FILE"
-VALIDATE $? "Start Nexus"
-
-echo ""
-echo "Nexus Status:"
-systemctl status nexus --no-pager
-
-echo ""
-echo "========================================="
-echo " Nexus Installation Completed"
-echo "========================================="
-echo "Access Nexus:"
-echo "http://<EC2-Public-IP>:8081"
-
-echo ""
-echo "Initial Admin Password:"
-cat /opt/sonatype-work/nexus3/admin.password
+if systemctl is-active --quiet nexus; then
+    echo "=========================================="
+    echo "Nexus installed successfully."
+    echo "Nexus service is running."
+    echo "=========================================="
+else
+    echo "ERROR: Nexus service failed to start."
+    echo "Check logs using:"
+    echo "sudo systemctl status nexus"
+    echo "sudo journalctl -u nexus -n 100 --no-pager"
+    exit 1
+fi

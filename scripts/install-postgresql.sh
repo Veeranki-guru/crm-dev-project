@@ -2,57 +2,110 @@
 
 set -e
 
-LOG_FILE="/tmp/install-postgresql.log"
+# ============================================================
+# PostgreSQL Configuration
+# ============================================================
 
-VALIDATE() {
-    if [ $1 -eq 0 ]; then
-        echo "$2 ... SUCCESS"
+PG_VERSION="15"
+
+echo "=========================================="
+echo "PostgreSQL ${PG_VERSION} Installation"
+echo "=========================================="
+
+# ============================================================
+# 1. Check if PostgreSQL is already installed
+# ============================================================
+
+if command -v psql >/dev/null 2>&1; then
+    echo "PostgreSQL is already installed."
+
+    psql --version
+
+    if systemctl is-active --quiet postgresql-15; then
+        echo "PostgreSQL service is already running."
     else
-        echo "$2 ... FAILURE"
-        echo "Check log: $LOG_FILE"
-        exit 1
+        echo "PostgreSQL is installed but service is not running."
     fi
-}
 
-echo "========================================="
-echo "   PostgreSQL Installation Started"
-echo "========================================="
-
-# Check root user
-if [ "$(id -u)" -ne 0 ]; then
-    echo "Please run this script as root or with sudo."
-    exit 1
+    exit 0
 fi
 
-echo "Installing PostgreSQL..."
+# ============================================================
+# 2. Install PostgreSQL Repository
+# ============================================================
 
-dnf install -y postgresql15-server postgresql15 &>>"$LOG_FILE"
-VALIDATE $? "PostgreSQL Installation"
+echo "Installing PostgreSQL official repository..."
 
-echo "Initializing PostgreSQL Database..."
+sudo dnf install -y \
+    https://download.postgresql.org/pub/repos/yum/reporpms/EL-9-x86_64/pgdg-redhat-repo-latest.noarch.rpm
 
-postgresql-setup --initdb &>>"$LOG_FILE"
-VALIDATE $? "Database Initialization"
+# ============================================================
+# 3. Disable RHEL PostgreSQL module
+# ============================================================
 
-echo "Enabling PostgreSQL Service..."
+echo "Disabling default PostgreSQL module..."
 
-systemctl enable postgresql &>>"$LOG_FILE"
-VALIDATE $? "Enable PostgreSQL"
+sudo dnf -qy module disable postgresql
 
-echo "Starting PostgreSQL Service..."
+# ============================================================
+# 4. Install PostgreSQL 15
+# ============================================================
 
-systemctl start postgresql &>>"$LOG_FILE"
-VALIDATE $? "Start PostgreSQL"
+echo "Installing PostgreSQL ${PG_VERSION}..."
 
-echo ""
-echo "PostgreSQL Status:"
-systemctl status postgresql --no-pager
+sudo dnf install -y postgresql15-server postgresql15
 
-echo ""
-echo "PostgreSQL Version:"
-psql --version
+# ============================================================
+# 5. Initialize PostgreSQL database
+# ============================================================
 
-echo ""
-echo "========================================="
-echo " PostgreSQL Installation Completed"
-echo "========================================="
+echo "Initializing PostgreSQL database..."
+
+if [ ! -f /var/lib/pgsql/15/data/PG_VERSION ]; then
+    sudo /usr/pgsql-15/bin/postgresql-15-setup initdb
+else
+    echo "PostgreSQL database is already initialized."
+fi
+
+# ============================================================
+# 6. Enable PostgreSQL service
+# ============================================================
+
+echo "Enabling PostgreSQL service..."
+
+sudo systemctl enable postgresql-15
+
+# ============================================================
+# 7. Start PostgreSQL service
+# ============================================================
+
+echo "Starting PostgreSQL service..."
+
+sudo systemctl start postgresql-15
+
+# ============================================================
+# 8. Check PostgreSQL status
+# ============================================================
+
+if systemctl is-active --quiet postgresql-15; then
+    echo "=========================================="
+    echo "PostgreSQL installed successfully."
+    echo "=========================================="
+
+    sudo systemctl status postgresql-15 --no-pager
+
+    echo ""
+    echo "PostgreSQL version:"
+    psql --version
+
+else
+    echo "ERROR: PostgreSQL failed to start."
+
+    echo "Check service status:"
+    echo "sudo systemctl status postgresql-15"
+
+    echo "Check logs:"
+    echo "sudo journalctl -u postgresql-15 -n 100 --no-pager"
+
+    exit 1
+fi

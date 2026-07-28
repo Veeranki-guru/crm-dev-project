@@ -5,22 +5,47 @@ set -e
 APP_VERSION="$1"
 
 if [ -z "$APP_VERSION" ]; then
-    echo "ERROR: APP_VERSION is required"
+    echo "ERROR: APP_VERSION is required."
+    echo "Usage: $0 <version>"
     exit 1
 fi
 
 PROJECT_NAME="crm-dev"
 ARTIFACT_NAME="${PROJECT_NAME}-${APP_VERSION}.tar.gz"
 
-echo "Uploading ${ARTIFACT_NAME} to Nexus..."
+if [ ! -f "$ARTIFACT_NAME" ]; then
+    echo "ERROR: Artifact not found:"
+    echo "$ARTIFACT_NAME"
+    exit 1
+fi
 
-curl -f \
-    -u "${NEXUS_USER}:${NEXUS_PASSWORD}" \
-    --upload-file "${ARTIFACT_NAME}" \
-    "${NEXUS_URL}/repository/${NEXUS_REPOSITORY}/${ARTIFACT_NAME}"
+if [ -z "$NEXUS_URL" ]; then
+    echo "ERROR: NEXUS_URL is not set."
+    exit 1
+fi
 
-echo "Upload successful."
+if [ -z "$NEXUS_REPOSITORY" ]; then
+    echo "ERROR: NEXUS_REPOSITORY is not set."
+    exit 1
+fi
 
-echo "Application : ${PROJECT_NAME}"
-echo "Version     : ${APP_VERSION}"
-echo "Artifact    : ${ARTIFACT_NAME}"
+if [ -z "$NEXUS_USER" ] || [ -z "$NEXUS_PASSWORD" ]; then
+    echo "ERROR: Nexus credentials are not available."
+    exit 1
+fi
+
+echo "Uploading artifact to Nexus..."
+echo "Version: $APP_VERSION"
+echo "Artifact: $ARTIFACT_NAME"
+
+curl \
+    --fail \
+    --show-error \
+    --user "$NEXUS_USER:$NEXUS_PASSWORD" \
+    --upload-file "$ARTIFACT_NAME" \
+    "$NEXUS_URL/repository/$NEXUS_REPOSITORY/$ARTIFACT_NAME"
+
+echo "=========================================="
+echo "Artifact uploaded successfully."
+echo "$ARTIFACT_NAME"
+echo "=========================================="
