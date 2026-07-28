@@ -1,107 +1,124 @@
 pipeline {
 
-```
-agent any
+    agent any
 
-parameters {
-    string(
-        name: 'APP_VERSION',
-        defaultValue: '1.0.1',
-        description: 'Application version'
-    )
-}
-
-environment {
-    NEXUS_URL = 'http://YOUR-NEXUS-IP:8081'
-    NEXUS_REPOSITORY = 'crm-dev-releases'
-}
-
-stages {
-
-    stage('Checkout') {
-        steps {
-            checkout scm
-        }
+    parameters {
+        string(
+            name: 'APP_VERSION',
+            defaultValue: '1.0.1',
+            description: 'Application version'
+        )
     }
 
-    stage('Show Version') {
-        steps {
-            echo "Application Version: ${params.APP_VERSION}"
-        }
+    environment {
+        NEXUS_URL = 'http://localhost:8081'
+        NEXUS_REPOSITORY = 'crm-dev-releases'
     }
 
-    stage('Build') {
-        steps {
-            sh 'bash ci-cd/ci/build.sh'
-        }
-    }
+    stages {
 
-    stage('Test QA') {
-        steps {
-            sh 'bash ci-cd/ci/test.sh'
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
         }
-    }
 
-    stage('SonarQube Scan') {
-        steps {
-            withCredentials([
-                string(
-                    credentialsId: 'sonar-token',
-                    variable: 'SONAR_TOKEN'
-                )
-            ]) {
-                sh 'bash ci-cd/ci/sonar-scan.sh'
+        stage('Show Version') {
+            steps {
+                echo "Application Version: ${params.APP_VERSION}"
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh 'bash ci-cd/ci/build.sh'
+            }
+        }
+
+        stage('Test QA') {
+            steps {
+                sh 'bash ci-cd/ci/test.sh'
+            }
+        }
+
+        stage('SonarQube Scan') {
+            steps {
+                withCredentials([
+                    string(
+                        credentialsId: 'sonar-token',
+                        variable: 'SONAR_TOKEN'
+                    )
+                ]) {
+                    sh 'bash ci-cd/ci/sonar-scan.sh'
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                withCredentials([
+                    string(
+                        credentialsId: 'sonar-token',
+                        variable: 'SONAR_TOKEN'
+                    )
+                ]) {
+                    sh 'bash ci-cd/ci/quality-gate.sh'
+                }
+            }
+        }
+
+        stage('Package') {
+            steps {
+                sh 'bash ci-cd/ci/artifact.sh'
+            }
+        }
+
+        stage('Upload to Nexus') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'nexus-credentials',
+                        usernameVariable: 'NEXUS_USER',
+                        passwordVariable: 'NEXUS_PASSWORD'
+                    )
+                ]) {
+                    sh 'bash ci-cd/ci/upload-artifact.sh'
+                }
             }
         }
     }
 
-    stage('Quality Gate') {
-        steps {
-            withCredentials([
-                string(
-                    credentialsId: 'sonar-token',
-                    variable: 'SONAR_TOKEN'
-                )
-            ]) {
-                sh 'bash ci-cd/ci/quality-gate.sh'
-            }
+    post {
+
+        success {
+            echo """
+======================================
+CI PIPELINE SUCCESS
+======================================
+
+Application : crm-dev
+Version     : ${params.APP_VERSION}
+Nexus       : ${NEXUS_URL}
+
+Artifact uploaded successfully.
+
+======================================
+"""
+        }
+
+        failure {
+            echo """
+======================================
+CI PIPELINE FAILED
+======================================
+
+Application : crm-dev
+Version     : ${params.APP_VERSION}
+
+Check Jenkins console output.
+
+======================================
+"""
         }
     }
-
-    stage('Package') {
-        steps {
-            sh 'bash ci-cd/ci/artifact.sh'
-        }
-    }
-
-    stage('Upload to Nexus') {
-        steps {
-            withCredentials([
-                usernamePassword(
-                    credentialsId: 'nexus-credentials',
-                    usernameVariable: 'NEXUS_USER',
-                    passwordVariable: 'NEXUS_PASSWORD'
-                )
-            ]) {
-                sh 'bash ci-cd/ci/upload-artifact.sh'
-            }
-        }
-    }
-}
-
-post {
-
-    success {
-        echo "======================================"
-        echo "CI PIPELINE SUCCESS"
-        echo "Version: ${params.APP_VERSION}"
-        echo "======================================"
-    }
-
-    failure {
-        echo "CI PIPELINE FAILED"
-    }
-}
-```
-
 }

@@ -1,168 +1,168 @@
-#!/bin/bash
+# #!/bin/bash
 
-set -e
+# set -e
 
-LOG_FILE="/tmp/install.log"
+# LOG_FILE="/tmp/install.log"
 
-echo "========================================="
-echo " DevOps Tools Installation Started"
-echo "========================================="
+# echo "========================================="
+# echo " DevOps Tools Installation Started"
+# echo "========================================="
 
-VALIDATE() {
-    if [ $1 -eq 0 ]; then
-        echo "$2 ... SUCCESS"
-    else
-        echo "$2 ... FAILURE"
-        echo "Check log: $LOG_FILE"
-        exit 1
-    fi
-}
+# VALIDATE() {
+#     if [ $1 -eq 0 ]; then
+#         echo "$2 ... SUCCESS"
+#     else
+#         echo "$2 ... FAILURE"
+#         echo "Check log: $LOG_FILE"
+#         exit 1
+#     fi
+# }
 
-# Root Check
-if [ "$(id -u)" -ne 0 ]; then
-    echo "Please run as root or sudo."
-    exit 1
-fi
+# # Root Check
+# if [ "$(id -u)" -ne 0 ]; then
+#     echo "Please run as root or sudo."
+#     exit 1
+# fi
 
-echo "Updating System..."
-dnf update -y &>>$LOG_FILE
-VALIDATE $? "System Update"
+# echo "Updating System..."
+# dnf update -y &>>$LOG_FILE
+# VALIDATE $? "System Update"
 
-###################################################
-# Java
-###################################################
+# ###################################################
+# # Java
+# ###################################################
 
-echo "Installing Java..."
-dnf install -y java-21-openjdk java-21-openjdk-devel &>>$LOG_FILE
-VALIDATE $? "Java Installation"
+# echo "Installing Java..."
+# dnf install -y java-21-openjdk java-21-openjdk-devel &>>$LOG_FILE
+# VALIDATE $? "Java Installation"
 
-###################################################
-# Git
-###################################################
+# ###################################################
+# # Git
+# ###################################################
 
-echo "Installing Git..."
-dnf install -y git &>>$LOG_FILE
-VALIDATE $? "Git Installation"
+# echo "Installing Git..."
+# dnf install -y git &>>$LOG_FILE
+# VALIDATE $? "Git Installation"
 
-###################################################
-# Maven
-###################################################
+# ###################################################
+# # Maven
+# ###################################################
 
-echo "Installing Maven..."
-dnf install -y maven &>>$LOG_FILE
-VALIDATE $? "Maven Installation"
+# echo "Installing Maven..."
+# dnf install -y maven &>>$LOG_FILE
+# VALIDATE $? "Maven Installation"
 
-###################################################
-# NodeJS
-###################################################
+# ###################################################
+# # NodeJS
+# ###################################################
 
-echo "Installing NodeJS..."
-curl -fsSL https://rpm.nodesource.com/setup_22.x | bash - &>>$LOG_FILE
-dnf install -y nodejs &>>$LOG_FILE
-VALIDATE $? "NodeJS Installation"
+# echo "Installing NodeJS..."
+# curl -fsSL https://rpm.nodesource.com/setup_22.x | bash - &>>$LOG_FILE
+# dnf install -y nodejs &>>$LOG_FILE
+# VALIDATE $? "NodeJS Installation"
 
-###################################################
-# PostgreSQL
-###################################################
+# ###################################################
+# # PostgreSQL
+# ###################################################
 
-echo "Installing PostgreSQL..."
-dnf install -y postgresql15-server postgresql15 &>>$LOG_FILE
-VALIDATE $? "PostgreSQL Installation"
+# echo "Installing PostgreSQL..."
+# dnf install -y postgresql15-server postgresql15 &>>$LOG_FILE
+# VALIDATE $? "PostgreSQL Installation"
 
-###################################################
-# Jenkins
-###################################################
+# ###################################################
+# # Jenkins
+# ###################################################
 
-echo "Installing Jenkins..."
+# echo "Installing Jenkins..."
 
-wget -O /etc/yum.repos.d/jenkins.repo \
-https://pkg.jenkins.io/redhat-stable/jenkins.repo &>>$LOG_FILE
+# wget -O /etc/yum.repos.d/jenkins.repo \
+# https://pkg.jenkins.io/redhat-stable/jenkins.repo &>>$LOG_FILE
 
-rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key &>>$LOG_FILE
+# rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key &>>$LOG_FILE
 
-dnf install -y jenkins &>>$LOG_FILE
-VALIDATE $? "Jenkins Installation"
+# dnf install -y jenkins &>>$LOG_FILE
+# VALIDATE $? "Jenkins Installation"
 
-systemctl enable jenkins
-systemctl start jenkins
+# systemctl enable jenkins
+# systemctl start jenkins
 
-###################################################
-# SonarQube
-###################################################
+# ###################################################
+# # SonarQube
+# ###################################################
 
-echo "Installing SonarQube..."
+# echo "Installing SonarQube..."
 
-useradd sonar || true
+# useradd sonar || true
 
-cd /opt
+# cd /opt
 
-wget https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-25.7.0.110598.zip -O sonarqube.zip &>>$LOG_FILE
+# wget https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-25.7.0.110598.zip -O sonarqube.zip &>>$LOG_FILE
 
-dnf install -y unzip &>>$LOG_FILE
+# dnf install -y unzip &>>$LOG_FILE
 
-unzip -o sonarqube.zip &>>$LOG_FILE
+# unzip -o sonarqube.zip &>>$LOG_FILE
 
-mv sonarqube-* sonarqube
+# mv sonarqube-* sonarqube
 
-chown -R sonar:sonar /opt/sonarqube
+# chown -R sonar:sonar /opt/sonarqube
 
-VALIDATE $? "SonarQube Installation"
+# VALIDATE $? "SonarQube Installation"
 
-###################################################
-# Sonar Scanner
-###################################################
+# ###################################################
+# # Sonar Scanner
+# ###################################################
 
-echo "Installing Sonar Scanner..."
+# echo "Installing Sonar Scanner..."
 
-cd /opt
+# cd /opt
 
-wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-7.2.0.5079-linux-x64.zip \
--O sonar-scanner.zip &>>$LOG_FILE
+# wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-7.2.0.5079-linux-x64.zip \
+# -O sonar-scanner.zip &>>$LOG_FILE
 
-unzip -o sonar-scanner.zip &>>$LOG_FILE
+# unzip -o sonar-scanner.zip &>>$LOG_FILE
 
-mv sonar-scanner-* sonar-scanner
+# mv sonar-scanner-* sonar-scanner
 
-VALIDATE $? "Sonar Scanner Installation"
+# VALIDATE $? "Sonar Scanner Installation"
 
-###################################################
-# Nexus
-###################################################
+# ###################################################
+# # Nexus
+# ###################################################
 
-echo "Installing Nexus..."
+# echo "Installing Nexus..."
 
-useradd nexus || true
+# useradd nexus || true
 
-cd /opt
+# cd /opt
 
-wget https://download.sonatype.com/nexus/3/latest-unix.tar.gz \
--O nexus.tar.gz &>>$LOG_FILE
+# wget https://download.sonatype.com/nexus/3/latest-unix.tar.gz \
+# -O nexus.tar.gz &>>$LOG_FILE
 
-tar -xzf nexus.tar.gz &>>$LOG_FILE
+# tar -xzf nexus.tar.gz &>>$LOG_FILE
 
-mv nexus-* nexus
+# mv nexus-* nexus
 
-chown -R nexus:nexus /opt/nexus
+# chown -R nexus:nexus /opt/nexus
 
-VALIDATE $? "Nexus Installation"
+# VALIDATE $? "Nexus Installation"
 
-###################################################
-# Versions
-###################################################
+# ###################################################
+# # Versions
+# ###################################################
 
-echo ""
-echo "========================================="
-echo "Installed Versions"
-echo "========================================="
+# echo ""
+# echo "========================================="
+# echo "Installed Versions"
+# echo "========================================="
 
-java -version
-git --version
-mvn -version
-node -v
-npm -v
-psql --version
+# java -version
+# git --version
+# mvn -version
+# node -v
+# npm -v
+# psql --version
 
-echo ""
-echo "========================================="
-echo "Installation Completed Successfully"
-echo "========================================="
+# echo ""
+# echo "========================================="
+# echo "Installation Completed Successfully"
+# echo "========================================="
