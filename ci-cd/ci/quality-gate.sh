@@ -2,51 +2,20 @@
 
 set -e
 
-LOG_FILE="/tmp/quality-gate.log"
+echo "Checking SonarQube Quality Gate..."
 
-VALIDATE() {
-    if [ $1 -eq 0 ]; then
-        echo "$2 ... SUCCESS"
-    else
-        echo "$2 ... FAILURE"
-        echo "Check log: $LOG_FILE"
-        exit 1
-    fi
-}
+curl -s \
+  -u "$SONAR_TOKEN:" \
+  "http://localhost:9000/api/qualitygates/project_status?projectKey=crm-dev" \
+  > quality-gate.json
 
-echo "========================================="
-echo "     SonarQube Quality Gate Check"
-echo "========================================="
+STATUS=$(grep -o '"status":"[^"]*"' quality-gate.json | head -1 | cut -d'"' -f4)
 
-# SonarQube Configuration
-SONAR_HOST_URL="http://localhost:9000"
-SONAR_PROJECT_KEY="crm-dev"
-SONAR_TOKEN="YOUR_SONAR_TOKEN"
+echo "Quality Gate Status: $STATUS"
 
-echo "Waiting for SonarQube analysis..."
-sleep 20
-
-STATUS=$(curl -s -u "$SONAR_TOKEN:" \
-"$SONAR_HOST_URL/api/qualitygates/project_status?projectKey=$SONAR_PROJECT_KEY" \
-| grep -o '"status":"[^"]*"' | cut -d'"' -f4)
-
-if [ "$STATUS" = "OK" ]; then
-    echo ""
-    echo "========================================="
-    echo " Quality Gate PASSED"
-    echo "========================================="
-    exit 0
-elif [ "$STATUS" = "ERROR" ]; then
-    echo ""
-    echo "========================================="
-    echo " Quality Gate FAILED"
-    echo "========================================="
-    exit 1
-else
-    echo ""
-    echo "========================================="
-    echo " Unable to determine Quality Gate status"
-    echo "Status: $STATUS"
-    echo "========================================="
+if [ "$STATUS" != "OK" ]; then
+    echo "Quality Gate failed."
     exit 1
 fi
+
+echo "Quality Gate passed."
