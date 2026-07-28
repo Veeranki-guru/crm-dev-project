@@ -1,27 +1,27 @@
 #!/bin/bash
+
 set -e
 
-echo "======================================"
-echo "Creating Versioned Artifact"
-echo "======================================"
+APP_VERSION="$1"
 
 if [ -z "$APP_VERSION" ]; then
-    echo "ERROR: APP_VERSION is not set"
+    echo "ERROR: APP_VERSION is required"
     exit 1
 fi
 
-ARTIFACT_NAME="crm-dev-${APP_VERSION}.tar.gz"
+PROJECT_NAME="crm-dev"
+ARTIFACT_NAME="${PROJECT_NAME}-${APP_VERSION}.tar.gz"
 
-echo "Version: ${APP_VERSION}"
-echo "Artifact: ${ARTIFACT_NAME}"
+echo "Creating artifact: ${ARTIFACT_NAME}"
 
-tar --exclude='.git' \
-    --exclude='.env' \
-    --exclude='venv' \
-    --exclude='__pycache__' \
-    -czf "${ARTIFACT_NAME}" \
-    backend frontend
+rm -rf package
+mkdir -p package
 
+cp -r backend package/
+cp -r frontend package/
+cp -r scripts package/
+
+tar -czf "${ARTIFACT_NAME}" -C package .
+
+echo "Artifact created successfully:"
 ls -lh "${ARTIFACT_NAME}"
-
-echo "Artifact created successfully."

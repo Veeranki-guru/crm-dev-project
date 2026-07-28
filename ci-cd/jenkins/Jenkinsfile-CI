@@ -25,7 +25,7 @@ pipeline {
 
         stage('Show Version') {
             steps {
-                echo "Application Version: ${params.APP_VERSION}"
+                echo "Building version: ${params.APP_VERSION}"
             }
         }
 
@@ -69,7 +69,9 @@ pipeline {
 
         stage('Package') {
             steps {
-                sh 'bash ci-cd/ci/artifact.sh'
+                sh """
+                    bash ci-cd/ci/artifact.sh ${params.APP_VERSION}
+                """
             }
         }
 
@@ -82,43 +84,23 @@ pipeline {
                         passwordVariable: 'NEXUS_PASSWORD'
                     )
                 ]) {
-                    sh 'bash ci-cd/ci/upload-artifact.sh'
+                    sh """
+                        bash ci-cd/ci/upload-artifact.sh ${params.APP_VERSION}
+                    """
                 }
             }
         }
     }
 
     post {
-
         success {
-            echo """
-======================================
-CI PIPELINE SUCCESS
-======================================
-
-Application : crm-dev
-Version     : ${params.APP_VERSION}
-Nexus       : ${NEXUS_URL}
-
-Artifact uploaded successfully.
-
-======================================
-"""
+            echo "CI SUCCESS"
+            echo "Application: crm-dev"
+            echo "Version: ${params.APP_VERSION}"
         }
 
         failure {
-            echo """
-======================================
-CI PIPELINE FAILED
-======================================
-
-Application : crm-dev
-Version     : ${params.APP_VERSION}
-
-Check Jenkins console output.
-
-======================================
-"""
+            echo "CI FAILED"
         }
     }
 }

@@ -11,71 +11,86 @@ pipeline {
     }
 
     environment {
-
         PROJECT_NAME = 'crm-dev'
-
-        NEXUS_URL = 'http://YOUR-NEXUS-IP:8081'
-
+        NEXUS_URL = 'http://localhost:8081'
         NEXUS_REPOSITORY = 'crm-dev-releases'
-
+        NEXUS_CREDENTIALS = credentials('nexus-credentials')
         DEPLOY_PATH = '/opt/crm-dev'
-
         APP_URL = 'http://localhost:5000'
     }
 
     stages {
 
         stage('Download Version') {
-
             steps {
+                echo "Downloading ${PROJECT_NAME} version ${APP_VERSION} from Nexus..."
 
-                echo "Downloading version ${params.APP_VERSION} from Nexus..."
+                sh '''
+                    set -e
 
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: 'nexus-credentials',
-                        usernameVariable: 'NEXUS_USER',
-                        passwordVariable: 'NEXUS_PASSWORD'
-                    )
-                ]) {
+                    mkdir -p deployment
 
-                    sh 'bash ci-cd/cd/download-artifact.sh'
-                }
+                    curl -f \
+                    -u "$NEXUS_CREDENTIALS_USR:$NEXUS_CREDENTIALS_PSW" \
+                    -o "deployment/crm-dev-${APP_VERSION}.tar.gz" \
+                    "$NEXUS_URL/repository/$NEXUS_REPOSITORY/crm-dev-${APP_VERSION}.tar.gz"
+
+                    echo "Artifact downloaded successfully."
+                    ls -lh deployment/
+                '''
             }
         }
 
         stage('Deploy') {
-
             steps {
+                echo "Deploying ${PROJECT_NAME} version ${APP_VERSION}..."
 
-                echo "Deploying version ${params.APP_VERSION}..."
+                sh '''
+                    set -e
 
-                sh 'bash ci-cd/cd/deploy.sh'
+                    sudo mkdir -p "$DEPLOY_PATH"
+
+                    sudo tar -xzf \
+                    "deployment/crm-dev-${APP_VERSION}.tar.gz" \
+                    -C "$DEPLOY_PATH" \
+                    --strip-components=1
+
+                    sudo systemctl restart crm-dev
+
+                    sudo systemctl is-active --quiet crm-dev
+
+                    echo "CRM application restarted successfully."
+                '''
             }
         }
 
         stage('Health Check') {
-
             steps {
+                echo "Checking CRM application health..."
 
-                echo "Checking application health..."
+                sh '''
+                    set -e
 
-                sh 'bash ci-cd/cd/health-check.sh'
+                    sleep 10
+
+                    curl --fail \
+                    "$APP_URL/health"
+
+                    echo "Health check successful."
+                '''
             }
         }
     }
 
     post {
-
         success {
-
             echo """
 ======================================
 CD PIPELINE SUCCESS
 ======================================
 
 Application : ${PROJECT_NAME}
-Version     : ${params.APP_VERSION}
+Version     : ${APP_VERSION}
 Nexus       : ${NEXUS_URL}
 
 Deployment successful.
@@ -85,14 +100,13 @@ Deployment successful.
         }
 
         failure {
-
             echo """
 ======================================
 CD PIPELINE FAILED
 ======================================
 
 Application : ${PROJECT_NAME}
-Version     : ${params.APP_VERSION}
+Version     : ${APP_VERSION}
 
 Deployment failed.
 
