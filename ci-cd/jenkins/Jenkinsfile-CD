@@ -26,9 +26,10 @@ pipeline {
     stages {
 
         stage('Download Version') {
+
             steps {
 
-                echo "Downloading version ${params.APP_VERSION}..."
+                echo "Downloading version ${params.APP_VERSION} from Nexus..."
 
                 withCredentials([
                     usernamePassword(
@@ -38,35 +39,28 @@ pipeline {
                     )
                 ]) {
 
-                    sh '''
-                        export APP_VERSION="${APP_VERSION}"
-                        export NEXUS_URL="${NEXUS_URL}"
-                        export NEXUS_REPOSITORY="${NEXUS_REPOSITORY}"
-                        export NEXUS_USER="${NEXUS_USER}"
-                        export NEXUS_PASSWORD="${NEXUS_PASSWORD}"
-
-                        bash ci-cd/cd/download-artifact.sh
-                    '''
+                    sh 'bash ci-cd/cd/download-artifact.sh'
                 }
             }
         }
 
         stage('Deploy') {
+
             steps {
 
-                sh '''
-                    export APP_VERSION="${APP_VERSION}"
-                    bash ci-cd/cd/deploy.sh
-                '''
+                echo "Deploying version ${params.APP_VERSION}..."
+
+                sh 'bash ci-cd/cd/deploy.sh'
             }
         }
 
         stage('Health Check') {
+
             steps {
 
-                sh '''
-                    bash ci-cd/cd/health-check.sh
-                '''
+                echo "Checking application health..."
+
+                sh 'bash ci-cd/cd/health-check.sh'
             }
         }
     }
@@ -74,19 +68,38 @@ pipeline {
     post {
 
         success {
-            echo "======================================"
-            echo "CD PIPELINE SUCCESS"
-            echo "Application : ${PROJECT_NAME}"
-            echo "Version     : ${params.APP_VERSION}"
-            echo "======================================"
+
+            echo """
+======================================
+CD PIPELINE SUCCESS
+======================================
+
+Application : ${PROJECT_NAME}
+Version     : ${params.APP_VERSION}
+Nexus       : ${NEXUS_URL}
+
+Deployment successful.
+
+======================================
+"""
         }
 
         failure {
-            echo "======================================"
-            echo "CD PIPELINE FAILED"
-            echo "Application : ${PROJECT_NAME}"
-            echo "Version     : ${params.APP_VERSION}"
-            echo "======================================"
+
+            echo """
+======================================
+CD PIPELINE FAILED
+======================================
+
+Application : ${PROJECT_NAME}
+Version     : ${params.APP_VERSION}
+
+Deployment failed.
+
+Check Jenkins console output.
+
+======================================
+"""
         }
     }
 }
