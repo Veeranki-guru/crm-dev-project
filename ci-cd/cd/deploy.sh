@@ -2,68 +2,56 @@
 
 set -e
 
-echo "======================================"
-echo "CRM-DEV Deployment"
-echo "======================================"
+LOG_FILE="/tmp/deploy.log"
 
+VALIDATE() {
+    if [ $1 -eq 0 ]; then
+        echo "$2 ... SUCCESS"
+    else
+        echo "$2 ... FAILURE"
+        echo "Check log: $LOG_FILE"
+        exit 1
+    fi
+}
 
-PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+echo "========================================="
+echo "      Application Deployment Started"
+echo "========================================="
 
-cd "$PROJECT_ROOT"
+APP_DIR="/opt/crm-dev"
+APP_NAME="crm-dev"
 
-
-# Deployment configuration
-SERVER_USER="ec2-user"
-SERVER_HOST="YOUR_SERVER_IP"
-DEPLOY_PATH="/opt/crm-dev"
-
-
-# Find latest package
-PACKAGE=$(ls -t packages/*.tar.gz | head -n 1)
-
-
-if [ -z "$PACKAGE" ]
-then
-
-    echo "ERROR: Deployment package not found."
-
+# Check application directory
+if [ ! -d "$APP_DIR" ]; then
+    echo "ERROR: Application directory not found!"
     exit 1
-
 fi
 
+cd "$APP_DIR"
 
-echo "Deploying package:"
-echo "$PACKAGE"
+echo "Installing dependencies..."
 
+npm install &>>"$LOG_FILE"
+VALIDATE $? "NPM Install"
 
-# Copy package to server
-scp "$PACKAGE" \
-    "$SERVER_USER@$SERVER_HOST:/tmp/"
+echo "Stopping existing application..."
 
+pkill -f "node" || true
 
-# Get package filename
-PACKAGE_NAME=$(basename "$PACKAGE")
+echo "Starting application..."
 
+nohup npm start > app.log 2>&1 &
 
-# Deploy on server
-ssh "$SERVER_USER@$SERVER_HOST" << EOF
+sleep 10
 
-set -e
+if pgrep -f "node" >/dev/null; then
+    echo "Application started successfully."
+    VALIDATE 0 "Application Deployment"
+else
+    VALIDATE 1 "Application Deployment"
+fi
 
-sudo mkdir -p $DEPLOY_PATH
-
-sudo tar -xzf \
-    /tmp/$PACKAGE_NAME \
-    -C $DEPLOY_PATH \
-    --strip-components=1
-
-sudo systemctl restart crm-dev
-
-sudo systemctl status crm-dev --no-pager
-
-EOF
-
-
-echo "======================================"
-echo "Deployment Completed"
-echo "======================================"
+echo ""
+echo "========================================="
+echo " Deployment Completed Successfully"
+echo "========================================="

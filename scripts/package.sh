@@ -2,46 +2,47 @@
 
 set -e
 
-echo "======================================"
-echo "CRM-DEV Packaging"
-echo "======================================"
+LOG_FILE="/tmp/package.log"
 
+VALIDATE() {
+    if [ $1 -eq 0 ]; then
+        echo "$2 ... SUCCESS"
+    else
+        echo "$2 ... FAILURE"
+        echo "Check log: $LOG_FILE"
+        exit 1
+    fi
+}
 
-PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+echo "========================================="
+echo "      Package Build Started"
+echo "========================================="
 
-cd "$PROJECT_ROOT"
-
-
-# Check build directory
-if [ ! -d "build" ]
-then
-
-    echo "ERROR: build directory not found."
-
-    echo "Run build.sh first."
-
+# Check project directory
+if [ ! -f "package.json" ]; then
+    echo "ERROR: package.json not found!"
+    echo "Run this script from the project root directory."
     exit 1
-
 fi
 
+echo "Installing Node.js dependencies..."
 
-# Create packages directory
-mkdir -p packages
+npm install &>>"$LOG_FILE"
+VALIDATE $? "NPM Install"
 
+echo "Checking for build script..."
 
-# Package name
-PACKAGE_NAME="crm-dev-$(date +%Y%m%d-%H%M%S).tar.gz"
+if npm run | grep -q "build"; then
+    echo "Running application build..."
 
+    npm run build &>>"$LOG_FILE"
+    VALIDATE $? "Application Build"
+else
+    echo "No build script found in package.json."
+    echo "Skipping build step."
+fi
 
-# Create package
-tar -czf \
-    "packages/$PACKAGE_NAME" \
-    build/
-
-
-echo "======================================"
-echo "Package Created"
-echo "======================================"
-
-echo "Package:"
-echo "packages/$PACKAGE_NAME"
+echo ""
+echo "========================================="
+echo " Package Build Completed Successfully"
+echo "========================================="
