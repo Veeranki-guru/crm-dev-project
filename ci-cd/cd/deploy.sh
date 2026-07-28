@@ -1,57 +1,35 @@
 #!/bin/bash
-
 set -e
 
-LOG_FILE="/tmp/deploy.log"
+echo "======================================"
+echo "Deploying CRM Application"
+echo "======================================"
 
-VALIDATE() {
-    if [ $1 -eq 0 ]; then
-        echo "$2 ... SUCCESS"
-    else
-        echo "$2 ... FAILURE"
-        echo "Check log: $LOG_FILE"
-        exit 1
-    fi
-}
-
-echo "========================================="
-echo "      Application Deployment Started"
-echo "========================================="
-
-APP_DIR="/opt/crm-dev"
-APP_NAME="crm-dev"
-
-# Check application directory
-if [ ! -d "$APP_DIR" ]; then
-    echo "ERROR: Application directory not found!"
+if [ -z "$APP_VERSION" ]; then
+    echo "ERROR: APP_VERSION is not set"
     exit 1
 fi
 
-cd "$APP_DIR"
+ARTIFACT_NAME="crm-dev-${APP_VERSION}.tar.gz"
 
-echo "Installing dependencies..."
+DEPLOY_PATH="/opt/crm-dev"
 
-npm install &>>"$LOG_FILE"
-VALIDATE $? "NPM Install"
+echo "Version: ${APP_VERSION}"
+echo "Artifact: ${ARTIFACT_NAME}"
 
-echo "Stopping existing application..."
+sudo mkdir -p "$DEPLOY_PATH"
 
-pkill -f "node" || true
+sudo tar -xzf \
+    "deployment/${ARTIFACT_NAME}" \
+    -C "$DEPLOY_PATH" \
+    --strip-components=1
 
-echo "Starting application..."
+echo "Restarting CRM application..."
 
-nohup npm start > app.log 2>&1 &
+sudo systemctl restart crm-dev
 
-sleep 10
+echo "Checking application status..."
 
-if pgrep -f "node" >/dev/null; then
-    echo "Application started successfully."
-    VALIDATE 0 "Application Deployment"
-else
-    VALIDATE 1 "Application Deployment"
-fi
+sudo systemctl status crm-dev --no-pager
 
-echo ""
-echo "========================================="
-echo " Deployment Completed Successfully"
-echo "========================================="
+echo "Deployment completed successfully."

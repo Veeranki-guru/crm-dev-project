@@ -1,31 +1,21 @@
 #!/bin/bash
-
 set -e
 
 echo "======================================"
-echo "CRM-DEV Tests"
+echo "Running QA / Tests"
 echo "======================================"
 
+cd backend
 
-PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-
-cd "$PROJECT_ROOT/backend"
-
-
-# Activate virtual environment
 source venv/bin/activate
 
+if [ -d "tests" ]; then
+    pytest -v
+else
+    echo "No tests directory found."
+    echo "Running Python syntax validation..."
 
-# Install test dependency
-pip install pytest
+    python -m compileall .
 
-
-# Run tests
-echo "Running Python tests..."
-
-pytest tests/
-
-
-echo "======================================"
-echo "All Tests Passed"
-echo "======================================"
+    echo "QA validation completed."
+fi

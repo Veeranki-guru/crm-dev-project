@@ -1,48 +1,28 @@
 #!/bin/bash
-
 set -e
 
-LOG_FILE="/tmp/package.log"
+echo "======================================"
+echo "Packaging CRM application"
+echo "======================================"
 
-VALIDATE() {
-    if [ $1 -eq 0 ]; then
-        echo "$2 ... SUCCESS"
-    else
-        echo "$2 ... FAILURE"
-        echo "Check log: $LOG_FILE"
-        exit 1
-    fi
-}
+VERSION="${APP_VERSION}"
 
-echo "========================================="
-echo "      Package Build Started"
-echo "========================================="
-
-# Check project directory
-if [ ! -f "package.json" ]; then
-    echo "ERROR: package.json not found!"
-    echo "Run this script from the project root directory."
+if [ -z "$VERSION" ]; then
+    echo "ERROR: APP_VERSION is not set"
     exit 1
 fi
 
-echo "Installing Node.js dependencies..."
+ARTIFACT_NAME="crm-dev-${VERSION}.tar.gz"
 
-npm install &>>"$LOG_FILE"
-VALIDATE $? "NPM Install"
+echo "Application Version: ${VERSION}"
+echo "Artifact: ${ARTIFACT_NAME}"
 
-echo "Checking for build script..."
+tar --exclude='.git' \
+    --exclude='.env' \
+    --exclude='venv' \
+    --exclude='__pycache__' \
+    -czf "${ARTIFACT_NAME}" \
+    backend frontend
 
-if npm run | grep -q "build"; then
-    echo "Running application build..."
-
-    npm run build &>>"$LOG_FILE"
-    VALIDATE $? "Application Build"
-else
-    echo "No build script found in package.json."
-    echo "Skipping build step."
-fi
-
-echo ""
-echo "========================================="
-echo " Package Build Completed Successfully"
-echo "========================================="
+echo "Artifact created successfully:"
+ls -lh "${ARTIFACT_NAME}"

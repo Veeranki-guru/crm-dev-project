@@ -3,206 +3,76 @@ pipeline {
     agent any
 
     environment {
-
-        PROJECT_NAME = 'crm-dev'
-
-        VERSION = "1.0.${BUILD_NUMBER}"
-
-        NEXUS_URL = 'http://NEXUS_SERVER:8081'
-
+        NEXUS_URL = 'http://YOUR-NEXUS-IP:8081'
         NEXUS_REPOSITORY = 'crm-dev-releases'
-
-        NEXUS_CREDENTIALS = credentials('nexus-credentials')
-
     }
 
     stages {
 
         stage('Checkout') {
-
             steps {
-
-                echo 'Checking out source code...'
-
                 checkout scm
-
             }
-
         }
 
-        stage('Setup') {
-
+        stage('Generate Version') {
             steps {
-
-                echo 'Setting up Python environment...'
-
-                sh '''
-                    chmod +x scripts/*.sh
-
-                    ./scripts/setup.sh
-                '''
-
+                script {
+                    env.APP_VERSION = "1.0.${BUILD_NUMBER}"
+                    echo "Application Version: ${env.APP_VERSION}"
+                }
             }
-
         }
 
         stage('Build') {
-
             steps {
-
-                echo 'Building CRM application...'
-
-                sh '''
-                    ./scripts/build.sh
-                '''
-
+                sh 'bash ci-cd/ci/build.sh'
             }
+        }
 
+        stage('Test QA') {
+            steps {
+                sh 'bash ci-cd/ci/test.sh'
+            }
         }
 
         stage('SonarQube Scan') {
-
             steps {
-
-                echo 'Running SonarQube scan...'
-
-                withSonarQubeEnv('sonarqube') {
-
-                    sh '''
-                        sonar-scanner \
-                        -Dsonar.projectKey=crm-dev \
-                        -Dsonar.projectName=crm-dev \
-                        -Dsonar.sources=backend \
-                        -Dsonar.tests=backend/tests
-                    '''
-
-                }
-
+                sh 'bash ci-cd/ci/sonar-scan.sh'
             }
-
-        }
-
-        stage('Test') {
-
-            steps {
-
-                echo 'Running tests...'
-
-                sh '''
-                    ./scripts/test.sh
-                '''
-
-            }
-
         }
 
         stage('Quality Gate') {
-
             steps {
-
-                echo 'Checking SonarQube Quality Gate...'
-
-                timeout(
-                    time: 5,
-                    unit: 'MINUTES'
-                ) {
-
-                    waitForQualityGate(
-                        abortPipeline: true
-                    )
-
-                }
-
+                sh 'bash ci-cd/ci/quality-gate.sh'
             }
-
-        }
-
-        stage('Version') {
-
-            steps {
-
-                echo "Creating version ${VERSION}"
-
-                sh '''
-                    echo "${VERSION}" > VERSION
-
-                    cat VERSION
-                '''
-
-            }
-
         }
 
         stage('Package') {
-
             steps {
-
-                echo 'Creating application package...'
-
-                sh '''
-                    ./scripts/package.sh
-                '''
-
+                sh 'bash ci-cd/ci/artifact.sh'
             }
-
         }
 
-        stage('Push to Nexus') {
-
+        stage('Upload to Nexus') {
             steps {
-
-                echo "Uploading version ${VERSION} to Nexus..."
-
-                sh '''
-
-                    PACKAGE=$(ls -t packages/*.tar.gz | head -n 1)
-
-                    curl \
-                    -u "$NEXUS_CREDENTIALS_USR:$NEXUS_CREDENTIALS_PSW" \
-                    --upload-file "$PACKAGE" \
-                    "$NEXUS_URL/repository/$NEXUS_REPOSITORY/crm-dev-${VERSION}.tar.gz"
-
-                '''
-
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'nexus-credentials',
+                        usernameVariable: 'NEXUS_USER',
+                        passwordVariable: 'NEXUS_PASSWORD'
+                    )
+                ]) {
+                    sh 'bash ci-cd/ci/upload-artifact.sh'
+                }
             }
-
         }
-
     }
 
     post {
-
         success {
-
-            echo """
-            ======================================
-            CI PIPELINE SUCCESS
-            ======================================
-
-            Project : ${PROJECT_NAME}
-            Version : ${VERSION}
-
-            Artifact uploaded to Nexus.
-
-            ======================================
-            """
-
+            echo "CI SUCCESS"
+            echo "Version: ${APP_VERSION}"
         }
-
-        failure {
-
-            echo """
-            ======================================
-            CI PIPELINE FAILED
-            ======================================
-
-            Please check Jenkins console logs.
-
-            ======================================
-            """
-
-        }
-
     }
-
 }

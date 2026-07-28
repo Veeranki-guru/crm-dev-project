@@ -3,153 +3,90 @@ pipeline {
     agent any
 
     parameters {
-
         string(
             name: 'APP_VERSION',
             defaultValue: '1.0.1',
             description: 'Version to deploy'
         )
-
     }
 
     environment {
 
         PROJECT_NAME = 'crm-dev'
 
-        NEXUS_URL = 'http://NEXUS_SERVER:8081'
+        NEXUS_URL = 'http://YOUR-NEXUS-IP:8081'
 
         NEXUS_REPOSITORY = 'crm-dev-releases'
 
-        NEXUS_CREDENTIALS = credentials('nexus-credentials')
-
-        DEPLOY_USER = 'ec2-user'
-
-        DEPLOY_SERVER = 'YOUR_SERVER_IP'
-
         DEPLOY_PATH = '/opt/crm-dev'
 
-        APP_URL = 'http://YOUR_SERVER_IP:5000'
-
+        APP_URL = 'http://localhost:5000'
     }
 
     stages {
 
         stage('Download Version') {
-
             steps {
 
-                echo "Downloading version ${APP_VERSION}..."
+                echo "Downloading version ${params.APP_VERSION}..."
 
-                sh """
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'nexus-credentials',
+                        usernameVariable: 'NEXUS_USER',
+                        passwordVariable: 'NEXUS_PASSWORD'
+                    )
+                ]) {
 
-                    mkdir -p deployment
+                    sh '''
+                        export APP_VERSION="${APP_VERSION}"
+                        export NEXUS_URL="${NEXUS_URL}"
+                        export NEXUS_REPOSITORY="${NEXUS_REPOSITORY}"
+                        export NEXUS_USER="${NEXUS_USER}"
+                        export NEXUS_PASSWORD="${NEXUS_PASSWORD}"
 
-                    curl \
-                    -u "\$NEXUS_CREDENTIALS_USR:\$NEXUS_CREDENTIALS_PSW" \
-                    -o deployment/crm-dev-${APP_VERSION}.tar.gz \
-                    "\$NEXUS_URL/repository/\$NEXUS_REPOSITORY/crm-dev-${APP_VERSION}.tar.gz"
-
-                """
-
+                        bash ci-cd/cd/download-artifact.sh
+                    '''
+                }
             }
-
         }
 
         stage('Deploy') {
-
             steps {
 
-                echo "Deploying ${APP_VERSION}..."
-
-                sh """
-
-                    scp \
-                    deployment/crm-dev-${APP_VERSION}.tar.gz \
-                    \$DEPLOY_USER@\$DEPLOY_SERVER:/tmp/
-
-                """
-
-                sh """
-
-                    ssh \
-                    \$DEPLOY_USER@\$DEPLOY_SERVER << EOF
-
-                    set -e
-
-                    sudo mkdir -p \$DEPLOY_PATH
-
-                    sudo tar -xzf \
-                    /tmp/crm-dev-${APP_VERSION}.tar.gz \
-                    -C \$DEPLOY_PATH \
-                    --strip-components=1
-
-                    sudo systemctl restart crm-dev
-
-                    sudo systemctl status crm-dev --no-pager
-
-                    EOF
-
-                """
-
+                sh '''
+                    export APP_VERSION="${APP_VERSION}"
+                    bash ci-cd/cd/deploy.sh
+                '''
             }
-
         }
 
         stage('Health Check') {
-
             steps {
 
-                echo 'Checking application health...'
-
-                sh """
-
-                    sleep 10
-
-                    curl \
-                    --fail \
-                    \$APP_URL/health
-
-                """
-
+                sh '''
+                    bash ci-cd/cd/health-check.sh
+                '''
             }
-
         }
-
     }
 
     post {
 
         success {
-
-            echo """
-            ======================================
-            CD PIPELINE SUCCESS
-            ======================================
-
-            Application : ${PROJECT_NAME}
-            Version     : ${APP_VERSION}
-
-            Deployment successful.
-
-            ======================================
-            """
-
+            echo "======================================"
+            echo "CD PIPELINE SUCCESS"
+            echo "Application : ${PROJECT_NAME}"
+            echo "Version     : ${params.APP_VERSION}"
+            echo "======================================"
         }
 
         failure {
-
-            echo """
-            ======================================
-            CD PIPELINE FAILED
-            ======================================
-
-            Deployment failed.
-
-            ======================================
-            """
-
+            echo "======================================"
+            echo "CD PIPELINE FAILED"
+            echo "Application : ${PROJECT_NAME}"
+            echo "Version     : ${params.APP_VERSION}"
+            echo "======================================"
         }
-
     }
-
 }
