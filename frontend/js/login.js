@@ -74,7 +74,7 @@ if (loginForm) {
             try {
 
                 const response = await fetch(
-                    "http://localhost:5000/auth/login",
+                    "http://100.26.32.109:5000/auth/login",
                     {
                         method: "POST",
 

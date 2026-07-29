@@ -49,7 +49,7 @@ async function loadDashboardData() {
         // Get Users
         const usersResponse =
             await fetch(
-                "http://localhost:5000/users",
+                "http://100.26.32.109:5000/users",
                 {
                     credentials: "include"
                 }
@@ -59,7 +59,7 @@ async function loadDashboardData() {
         // Get Products
         const productsResponse =
             await fetch(
-                "http://localhost:5000/products",
+                "http://100.26.32.109:5000/products",
                 {
                     credentials: "include"
                 }
@@ -69,7 +69,7 @@ async function loadDashboardData() {
         // Get Orders
         const ordersResponse =
             await fetch(
-                "http://localhost:5000/orders",
+                "http://100.26.32.109:5000/orders",
                 {
                     credentials: "include"
                 }
@@ -128,7 +128,7 @@ async function logoutUser() {
 
         const response =
             await fetch(
-                "http://localhost:5000/auth/logout",
+                "http://100.26.32.109:5000/auth/logout",
                 {
                     method: "POST",
 
