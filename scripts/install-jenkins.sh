@@ -1,3 +1,4 @@
+```bash
 #!/bin/bash
 
 set -e
@@ -9,127 +10,128 @@ echo "      Jenkins Installation Started"
 echo "========================================="
 
 # Check root privileges
-
 if [ "$(id -u)" -ne 0 ]; then
-echo "ERROR: Please run this script with sudo."
-exit 1
+    echo "ERROR: Please run this script with sudo."
+    exit 1
 fi
 
 # Validation function
-
 VALIDATE() {
-if [ "$1" -eq 0 ]; then
-echo "$2 ... SUCCESS"
-else
-echo "$2 ... FAILURE"
-echo "Check log: $LOG_FILE"
-exit 1
-fi
+    if [ "$1" -eq 0 ]; then
+        echo "$2 ... SUCCESS"
+    else
+        echo "$2 ... FAILURE"
+        echo "Check log: $LOG_FILE"
+        exit 1
+    fi
 }
 
-# Install Java 21
+# Initialize log file
+touch "$LOG_FILE"
 
+# Install Java 21
 echo "Installing Java 21..."
 
-dnf install -y java-21-openjdk java-21-openjdk-devel &>>"$LOG_FILE"
+dnf install -y java-21-openjdk java-21-openjdk-devel >>"$LOG_FILE" 2>&1
+VALIDATE $? "Java 21 Installation"
 
-VALIDATE $? "Java Installation"
-
-# Check Java
-
+# Check Java version
+echo ""
 echo "Checking Java version..."
 java -version
 
 # Install curl if missing
-
+echo ""
 echo "Checking curl..."
 
 if ! command -v curl >/dev/null 2>&1; then
+    echo "Installing curl..."
 
-```
-echo "Installing curl..."
-
-dnf install -y curl &>>"$LOG_FILE"
-
-VALIDATE $? "curl Installation"
-```
-
+    dnf install -y curl >>"$LOG_FILE" 2>&1
+    VALIDATE $? "curl Installation"
 else
-
-```
-echo "curl already installed ... SUCCESS"
-```
-
+    echo "curl already installed ... SUCCESS"
 fi
 
-# Add Jenkins Repository
-
+# Add Jenkins repository
+echo ""
 echo "Adding Jenkins Repository..."
 
-curl -L https://pkg.jenkins.io/redhat-stable/jenkins.repo 
--o /etc/yum.repos.d/jenkins.repo 
-&>>"$LOG_FILE"
+curl -fsSL \
+    https://pkg.jenkins.io/redhat-stable/jenkins.repo \
+    -o /etc/yum.repos.d/jenkins.repo \
+    >>"$LOG_FILE" 2>&1
 
 VALIDATE $? "Jenkins Repository"
 
-# Import Jenkins GPG Key
-
+# Import Jenkins GPG key
+echo ""
 echo "Importing Jenkins GPG Key..."
 
-rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key 
-&>>"$LOG_FILE"
+rpm --import \
+    https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key \
+    >>"$LOG_FILE" 2>&1
 
 VALIDATE $? "Jenkins GPG Key"
 
 # Clean DNF cache
-
+echo ""
 echo "Cleaning DNF Cache..."
 
-dnf clean all &>>"$LOG_FILE"
+dnf clean all >>"$LOG_FILE" 2>&1
+VALIDATE $? "DNF Cache Cleanup"
 
 # Refresh repository metadata
-
+echo ""
 echo "Refreshing DNF Repository Metadata..."
 
-dnf makecache &>>"$LOG_FILE"
-
+dnf makecache >>"$LOG_FILE" 2>&1
 VALIDATE $? "DNF Metadata Refresh"
 
 # Install Jenkins
-
+echo ""
 echo "Installing Jenkins..."
 
-dnf install -y jenkins &>>"$LOG_FILE"
-
+dnf install -y jenkins >>"$LOG_FILE" 2>&1
 VALIDATE $? "Jenkins Installation"
 
 # Enable Jenkins
-
+echo ""
 echo "Enabling Jenkins Service..."
 
-systemctl enable jenkins &>>"$LOG_FILE"
-
+systemctl enable jenkins >>"$LOG_FILE" 2>&1
 VALIDATE $? "Enable Jenkins"
 
 # Start Jenkins
-
+echo ""
 echo "Starting Jenkins Service..."
 
-systemctl start jenkins &>>"$LOG_FILE"
-
+systemctl start jenkins >>"$LOG_FILE" 2>&1
 VALIDATE $? "Start Jenkins"
 
-# Check Jenkins
-
+# Check Jenkins service
+echo ""
 echo "Checking Jenkins Service..."
 
 if systemctl is-active --quiet jenkins; then
-echo "Jenkins Service ... RUNNING"
+    echo "Jenkins Service ... RUNNING"
 else
-echo "Jenkins Service ... FAILED"
-echo "Run:"
-echo "sudo journalctl -u jenkins -n 100 --no-pager"
-exit 1
+    echo "Jenkins Service ... FAILED"
+    echo ""
+    echo "Check Jenkins logs with:"
+    echo "sudo journalctl -u jenkins -n 100 --no-pager"
+    exit 1
+fi
+
+# Check Jenkins port
+echo ""
+echo "Checking Jenkins Port..."
+
+if ss -lntp | grep -q ":8080"; then
+    echo "Jenkins is listening on port 8080."
+else
+    echo "WARNING: Jenkins is not listening on port 8080."
+    echo "Check Jenkins status and logs."
 fi
 
 echo ""
@@ -142,9 +144,23 @@ echo "Jenkins Status:"
 systemctl status jenkins --no-pager
 
 echo ""
-echo "Initial Jenkins Admin Password:"
-echo "sudo cat /var/lib/jenkins/secrets/initialAdminPassword"
+echo "Jenkins Version:"
+jenkins --version || true
 
 echo ""
-echo "Installation log:"
+echo "Initial Jenkins Admin Password:"
+if [ -f /var/lib/jenkins/secrets/initialAdminPassword ]; then
+    cat /var/lib/jenkins/secrets/initialAdminPassword
+else
+    echo "Password file not available yet."
+    echo "Check: /var/lib/jenkins/secrets/initialAdminPassword"
+fi
+
+echo ""
+echo "Installation Log:"
 echo "$LOG_FILE"
+
+echo ""
+echo "Jenkins URL:"
+echo "http://<EC2-PUBLIC-IP>:8080"
+```
