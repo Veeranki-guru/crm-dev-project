@@ -1,4 +1,4 @@
-
+```bash
 #!/bin/bash
 
 set -e
@@ -15,8 +15,8 @@ if [ "$(id -u)" -ne 0 ]; then
     exit 1
 fi
 
-# Install Java 21, curl and fontconfig
-echo "Installing required packages..."
+# Install required packages
+echo "Installing Java 21, Curl and Fontconfig..."
 
 dnf install -y java-21-openjdk java-21-openjdk-devel curl fontconfig \
     >> "$LOG" 2>&1
@@ -32,13 +32,15 @@ java -version
 echo ""
 echo "Adding Jenkins repository..."
 
-curl -fsSL https://pkg.jenkins.io/redhat-stable/jenkins.repo \
+curl -fsSL \
+    https://pkg.jenkins.io/redhat-stable/jenkins.repo \
     -o /etc/yum.repos.d/jenkins.repo
 
 # Import Jenkins GPG key
 echo "Importing Jenkins GPG key..."
 
-rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
+rpm --import \
+    https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
 
 # Install Jenkins
 echo ""
@@ -52,7 +54,7 @@ echo "Starting Jenkins..."
 
 systemctl enable --now jenkins
 
-# Check Jenkins
+# Check Jenkins status
 echo ""
 echo "Checking Jenkins status..."
 
@@ -64,6 +66,7 @@ else
     exit 1
 fi
 
+# Final output
 echo ""
 echo "========================================="
 echo " Jenkins Installation Completed"
@@ -85,3 +88,7 @@ echo ""
 echo "Initial Jenkins Admin Password:"
 echo "sudo cat /var/lib/jenkins/secrets/initialAdminPassword"
 
+echo ""
+echo "Installation Log:"
+echo "$LOG"
+```
