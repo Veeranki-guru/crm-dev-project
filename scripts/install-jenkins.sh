@@ -11,38 +11,43 @@ echo "========================================="
 
 # Check root
 if [ "$(id -u)" -ne 0 ]; then
-    echo "ERROR: Please run with sudo"
+    echo "ERROR: Run this script with sudo"
     exit 1
 fi
 
-# Install required packages
-echo "Installing Java 21 and required packages..."
+# Install Java 21, curl and fontconfig
+echo "Installing required packages..."
 
-dnf install -y java-21-openjdk java-21-openjdk-devel fontconfig curl \
+dnf install -y java-21-openjdk java-21-openjdk-devel curl fontconfig \
     >> "$LOG" 2>&1
 
+echo "Required packages installed successfully."
+
+# Check Java
+echo ""
 echo "Java Version:"
 java -version
 
 # Add Jenkins repository
+echo ""
 echo "Adding Jenkins repository..."
 
-curl -fsSL \
-    https://pkg.jenkins.io/redhat-stable/jenkins.repo \
+curl -fsSL https://pkg.jenkins.io/redhat-stable/jenkins.repo \
     -o /etc/yum.repos.d/jenkins.repo
 
 # Import Jenkins GPG key
 echo "Importing Jenkins GPG key..."
 
-rpm --import \
-    https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
+rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
 
 # Install Jenkins
+echo ""
 echo "Installing Jenkins..."
 
 dnf install -y jenkins >> "$LOG" 2>&1
 
 # Enable and start Jenkins
+echo ""
 echo "Starting Jenkins..."
 
 systemctl enable --now jenkins
@@ -52,9 +57,9 @@ echo ""
 echo "Checking Jenkins status..."
 
 if systemctl is-active --quiet jenkins; then
-    echo "Jenkins Service: RUNNING"
+    echo "Jenkins Service ... RUNNING"
 else
-    echo "Jenkins Service: FAILED"
+    echo "Jenkins Service ... FAILED"
     systemctl status jenkins --no-pager
     exit 1
 fi
@@ -79,8 +84,4 @@ systemctl status jenkins --no-pager
 echo ""
 echo "Initial Jenkins Admin Password:"
 echo "sudo cat /var/lib/jenkins/secrets/initialAdminPassword"
-
-echo ""
-echo "Installation Log:"
-echo "$LOG"
 
