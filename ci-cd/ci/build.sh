@@ -1,9 +1,10 @@
+
 #!/bin/bash
 
 set -e
 
 echo "======================================"
-echo "Starting CRM DEV Build"
+echo "CRM DEV CI BUILD"
 echo "======================================"
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -12,59 +13,89 @@ cd "$PROJECT_ROOT"
 
 echo "Project Root: $PROJECT_ROOT"
 
-# --------------------------------------
-# Backend Build
-# --------------------------------------
 
-echo "Checking Python backend..."
+# ==================================================
+# Validate Backend
+# ==================================================
 
-if [ ! -f backend/app.py ]; then
-    echo "ERROR: backend/app.py not found."
+echo "Checking backend..."
+
+test -f backend/app.py || {
+    echo "ERROR: backend/app.py not found"
     exit 1
-fi
+}
 
-if [ -f backend/requirements.txt ]; then
+test -f backend/requirements.txt || {
+    echo "ERROR: backend/requirements.txt not found"
+    exit 1
+}
 
-    echo "Creating Python virtual environment..."
 
-    python3 -m venv backend/venv
-
-    source backend/venv/bin/activate
-
-    python -m pip install --upgrade pip
-
-    pip install -r backend/requirements.txt
-
-    echo "Python dependencies installed successfully."
-
-    deactivate
-
-else
-    echo "WARNING: backend/requirements.txt not found."
-    echo "Skipping Python dependency installation."
-fi
-
-# --------------------------------------
-# Frontend Validation
-# --------------------------------------
+# ==================================================
+# Validate Frontend
+# ==================================================
 
 echo "Checking frontend..."
 
-if [ ! -f frontend/index.html ]; then
-    echo "ERROR: frontend/index.html not found."
+test -f frontend/index.html || {
+    echo "ERROR: frontend/index.html not found"
     exit 1
-fi
-
-if [ ! -f frontend/login.html ]; then
-    echo "WARNING: frontend/login.html not found."
-fi
+}
 
 echo "Frontend validation successful."
 
-# --------------------------------------
-# Build Complete
-# --------------------------------------
+
+# ==================================================
+# Create Virtual Environment
+# ==================================================
+
+echo "Creating Python virtual environment..."
+
+python3 -m venv backend/venv
+
+source backend/venv/bin/activate
+
+
+# ==================================================
+# Install Dependencies
+# ==================================================
+
+echo "Upgrading pip..."
+
+python -m pip install --upgrade pip
+
+echo "Installing Python dependencies..."
+
+pip install -r backend/requirements.txt
+
+
+# ==================================================
+# Python Syntax Check
+# ==================================================
+
+echo "Checking Python syntax..."
+
+python -m compileall -q backend
+
+
+# ==================================================
+# Application Import Check
+# ==================================================
+
+echo "Checking Flask application import..."
+
+cd backend
+
+python -c "import app; print('Flask application import successful')"
+
+cd "$PROJECT_ROOT"
+
+
+# ==================================================
+# Build Completed
+# ==================================================
 
 echo "======================================"
-echo "Build completed successfully."
+echo "CRM DEV BUILD SUCCESSFUL"
 echo "======================================"
+
