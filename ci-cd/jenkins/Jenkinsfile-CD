@@ -1,59 +1,110 @@
 pipeline {
-
     agent any
 
     parameters {
         string(
             name: 'APP_VERSION',
-            defaultValue: '1.0.1',
-            description: 'Version to deploy'
+            defaultValue: '',
+            description: 'Version to deploy. Example: 1.0.3'
         )
     }
 
     environment {
+        APP_NAME = 'crm-dev'
+
         NEXUS_URL = 'http://localhost:8081'
         NEXUS_REPOSITORY = 'crm-dev-releases'
+        NEXUS_CREDENTIALS = 'nexus-credentials'
+
+        DEPLOY_PATH = '/opt/crm-dev'
+        APP_PORT = '5000'
     }
 
     stages {
+
+        stage('Validate Version') {
+            steps {
+                script {
+                    if (!params.APP_VERSION?.trim()) {
+                        error("APP_VERSION is required.")
+                    }
+
+                    if (!(params.APP_VERSION ==~ /^\d+\.\d+\.\d+$/)) {
+                        error(
+                            "Invalid APP_VERSION: ${params.APP_VERSION}. " +
+                            "Expected format: 1.0.3"
+                        )
+                    }
+
+                    env.VERSION = params.APP_VERSION
+
+                    echo "Deploying version: ${env.VERSION}"
+                }
+            }
+        }
 
         stage('Download Artifact') {
             steps {
                 withCredentials([
                     usernamePassword(
-                        credentialsId: 'nexus-credentials',
+                        credentialsId: "${NEXUS_CREDENTIALS}",
                         usernameVariable: 'NEXUS_USER',
                         passwordVariable: 'NEXUS_PASSWORD'
                     )
                 ]) {
-                    sh "bash ci-cd/cd/download-artifact.sh ${params.APP_VERSION}"
+                    sh '''
+                        set -e
+
+                        chmod +x ci-cd/cd/download-artifact.sh
+
+                        ./ci-cd/cd/download-artifact.sh \
+                            "${VERSION}" \
+                            "${NEXUS_URL}" \
+                            "${NEXUS_REPOSITORY}" \
+                            "${NEXUS_USER}" \
+                            "${NEXUS_PASSWORD}"
+                    '''
                 }
             }
         }
 
         stage('Deploy') {
             steps {
-                sh "bash ci-cd/cd/deploy.sh ${params.APP_VERSION}"
+                sh '''
+                    set -e
+
+                    chmod +x ci-cd/cd/deploy.sh
+
+                    sudo ./ci-cd/cd/deploy.sh \
+                        "${VERSION}" \
+                        "${DEPLOY_PATH}"
+                '''
             }
         }
 
         stage('Health Check') {
             steps {
-                sh 'bash ci-cd/cd/health-check.sh'
+                sh '''
+                    set -e
+
+                    chmod +x ci-cd/cd/health-check.sh
+
+                    ./ci-cd/cd/health-check.sh \
+                        "http://localhost:${APP_PORT}/health"
+                '''
             }
         }
     }
 
     post {
         success {
-            echo "======================================"
-            echo "CD PIPELINE SUCCESS"
-            echo "Deployed Version: ${params.APP_VERSION}"
-            echo "======================================"
+            echo "CD SUCCESS"
+            echo "Version ${env.VERSION} deployed successfully."
         }
 
         failure {
-            echo "CD PIPELINE FAILED"
+            echo "CD FAILED"
+            echo "Deployment or health check failed."
         }
     }
 }

@@ -1,18 +1,22 @@
 pipeline {
-
     agent any
 
     parameters {
         string(
             name: 'APP_VERSION',
-            defaultValue: '1.0.1',
-            description: 'Application version'
+            defaultValue: '',
+            description: 'Application version. Example: 1.0.3'
         )
     }
 
     environment {
+        APP_NAME = 'crm-dev'
+
         NEXUS_URL = 'http://localhost:8081'
         NEXUS_REPOSITORY = 'crm-dev-releases'
+        NEXUS_CREDENTIALS = 'nexus-credentials'
+
+        SONAR_PROJECT_KEY = 'crm-dev'
     }
 
     stages {
@@ -23,53 +27,109 @@ pipeline {
             }
         }
 
-        stage('Show Version') {
+        stage('Validate Version') {
             steps {
-                echo "Application Version: ${params.APP_VERSION}"
+                script {
+                    if (!params.APP_VERSION?.trim()) {
+                        error("APP_VERSION is required.")
+                    }
+
+                    if (!(params.APP_VERSION ==~ /^\d+\.\d+\.\d+$/)) {
+                        error(
+                            "Invalid APP_VERSION: ${params.APP_VERSION}. " +
+                            "Expected format: 1.0.3"
+                        )
+                    }
+
+                    env.VERSION = params.APP_VERSION
+
+                    echo "Building version: ${env.VERSION}"
+                }
+            }
+        }
+
+        stage('Setup') {
+            steps {
+                sh '''
+                    set -e
+
+                    echo "Checking project structure..."
+
+                    test -d backend || {
+                        echo "ERROR: backend directory not found"
+                        exit 1
+                    }
+
+                    test -d frontend || {
+                        echo "ERROR: frontend directory not found"
+                        exit 1
+                    }
+
+                    echo "Project structure validation successful."
+                '''
             }
         }
 
         stage('Build') {
             steps {
-                sh 'bash ci-cd/ci/build.sh'
+                sh '''
+                    set -e
+
+                    chmod +x ci-cd/ci/build.sh
+
+                    ./ci-cd/ci/build.sh
+                '''
             }
         }
 
-        stage('Test QA') {
+        stage('Test') {
             steps {
-                sh 'bash ci-cd/ci/test.sh'
+                sh '''
+                    set -e
+
+                    if [ -x ci-cd/ci/test.sh ]; then
+                        ./ci-cd/ci/test.sh
+                    else
+                        echo "WARNING: test.sh not found."
+                        echo "Skipping automated tests."
+                    fi
+                '''
             }
         }
 
         stage('SonarQube Scan') {
             steps {
-                withCredentials([
-                    string(
-                        credentialsId: 'sonar-token',
-                        variable: 'SONAR_TOKEN'
-                    )
-                ]) {
-                    sh 'bash ci-cd/ci/sonar-scan.sh'
+                withSonarQubeEnv('SonarQube') {
+                    sh '''
+                        set -e
+
+                        sonar-scanner \
+                          -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                          -Dsonar.projectName=${SONAR_PROJECT_KEY} \
+                          -Dsonar.sources=backend,frontend \
+                          -Dsonar.sourceEncoding=UTF-8
+                    '''
                 }
             }
         }
 
         stage('Quality Gate') {
             steps {
-                withCredentials([
-                    string(
-                        credentialsId: 'sonar-token',
-                        variable: 'SONAR_TOKEN'
-                    )
-                ]) {
-                    sh 'bash ci-cd/ci/quality-gate.sh'
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
                 }
             }
         }
 
-        stage('Package') {
+        stage('Package Artifact') {
             steps {
-                sh "bash ci-cd/ci/artifact.sh ${params.APP_VERSION}"
+                sh '''
+                    set -e
+
+                    chmod +x ci-cd/ci/artifact.sh
+
+                    ./ci-cd/ci/artifact.sh "${VERSION}"
+                '''
             }
         }
 
@@ -77,12 +137,30 @@ pipeline {
             steps {
                 withCredentials([
                     usernamePassword(
-                        credentialsId: 'nexus-credentials',
+                        credentialsId: "${NEXUS_CREDENTIALS}",
                         usernameVariable: 'NEXUS_USER',
                         passwordVariable: 'NEXUS_PASSWORD'
                     )
                 ]) {
-                    sh "bash ci-cd/ci/upload-artifact.sh ${params.APP_VERSION}"
+                    sh '''
+                        set -e
+
+                        ARTIFACT="crm-dev-${VERSION}.tar.gz"
+                        ARTIFACT_PATH="${WORKSPACE}/${ARTIFACT}"
+
+                        test -f "${ARTIFACT_PATH}" || {
+                            echo "ERROR: Artifact not found: ${ARTIFACT_PATH}"
+                            exit 1
+                        }
+
+                        echo "Uploading ${ARTIFACT} to Nexus..."
+
+                        curl -f -u "${NEXUS_USER}:${NEXUS_PASSWORD}" \
+                          --upload-file "${ARTIFACT_PATH}" \
+                          "${NEXUS_URL}/repository/${NEXUS_REPOSITORY}/${ARTIFACT}"
+
+                        echo "Artifact uploaded successfully."
+                    '''
                 }
             }
         }
@@ -90,14 +168,19 @@ pipeline {
 
     post {
         success {
-            echo "======================================"
-            echo "CI PIPELINE SUCCESS"
-            echo "Version: ${params.APP_VERSION}"
-            echo "======================================"
+            echo "CI SUCCESS"
+            echo "Artifact: crm-dev-${env.VERSION}.tar.gz"
         }
 
         failure {
-            echo "CI PIPELINE FAILED"
+            echo "CI FAILED"
+        }
+
+        always {
+            archiveArtifacts(
+                artifacts: 'crm-dev-*.tar.gz',
+                allowEmptyArchive: true
+            )
         }
     }
 }

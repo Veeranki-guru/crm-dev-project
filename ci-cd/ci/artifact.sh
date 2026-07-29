@@ -2,32 +2,53 @@
 
 set -e
 
-APP_VERSION="$1"
+VERSION="$1"
 
-if [ -z "$APP_VERSION" ]; then
-    echo "ERROR: APP_VERSION is required"
-    echo "Usage: $0 <version>"
+if [ -z "$VERSION" ]; then
+    echo "ERROR: Version is required."
+    echo "Usage: ./artifact.sh 1.0.1"
     exit 1
 fi
 
-PROJECT_NAME="crm-dev"
-ARTIFACT_NAME="${PROJECT_NAME}-${APP_VERSION}.tar.gz"
+if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "ERROR: Invalid version: $VERSION"
+    echo "Expected format: 1.0.1"
+    exit 1
+fi
 
-echo "Creating artifact: $ARTIFACT_NAME"
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+
+cd "$PROJECT_ROOT"
+
+ARTIFACT_NAME="crm-dev-${VERSION}.tar.gz"
+
+echo "Creating artifact:"
+echo "$ARTIFACT_NAME"
 
 rm -f "$ARTIFACT_NAME"
 
 tar \
-    --exclude="backend/venv" \
-    --exclude=".git" \
-    --exclude=".env" \
+    --exclude='.git' \
+    --exclude='.git/*' \
+    --exclude='.env' \
+    --exclude='.env.*' \
+    --exclude='backend/venv' \
+    --exclude='backend/venv/*' \
+    --exclude='__pycache__' \
+    --exclude='*/__pycache__/*' \
+    --exclude='*.pyc' \
+    --exclude='*.pyo' \
+    --exclude='*.log' \
+    --exclude='crm-dev-*.tar.gz' \
     -czf "$ARTIFACT_NAME" \
-    backend frontend scripts
+    backend \
+    frontend \
+    ci-cd
 
-if [ ! -f "$ARTIFACT_NAME" ]; then
-    echo "ERROR: Artifact creation failed"
-    exit 1
-fi
+echo "Artifact created successfully."
 
-echo "Artifact created successfully:"
+echo "Artifact details:"
 ls -lh "$ARTIFACT_NAME"
+
+echo "Artifact contents:"
+tar -tzf "$ARTIFACT_NAME" | head -50

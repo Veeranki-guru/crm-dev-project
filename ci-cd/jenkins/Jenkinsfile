@@ -1,89 +1,68 @@
 pipeline {
-
     agent any
+
+    parameters {
+        string(
+            name: 'APP_VERSION',
+            defaultValue: '',
+            description: 'Leave empty for automatic version 1.0.BUILD_NUMBER, or enter an existing version such as 1.0.3'
+        )
+    }
 
     stages {
 
         stage('Generate Version') {
             steps {
                 script {
-                    env.APP_VERSION = "1.0.${BUILD_NUMBER}"
+                    if (params.APP_VERSION?.trim()) {
+                        env.APP_VERSION = params.APP_VERSION.trim()
+                    } else {
+                        env.APP_VERSION = "1.0.${env.BUILD_NUMBER}"
+                    }
+
                     echo "Application Version: ${env.APP_VERSION}"
                 }
             }
         }
 
-        stage('CI Pipeline') {
+        stage('Run CI') {
             steps {
-
-                echo "Starting CI Pipeline..."
-                echo "Version: ${APP_VERSION}"
-
-                build(
-                    job: 'crm-dev-CI',
+                build job: 'crm-dev-CI',
                     parameters: [
                         string(
                             name: 'APP_VERSION',
-                            value: "${APP_VERSION}"
+                            value: env.APP_VERSION
                         )
                     ],
-                    wait: true
-                )
+                    wait: true,
+                    propagate: true
             }
         }
 
-        stage('CD Pipeline') {
+        stage('Run CD') {
             steps {
-
-                echo "CI Pipeline completed successfully."
-                echo "Starting CD Pipeline..."
-                echo "Deploying version: ${APP_VERSION}"
-
-                build(
-                    job: 'crm-dev-CD',
+                build job: 'crm-dev-CD',
                     parameters: [
                         string(
                             name: 'APP_VERSION',
-                            value: "${APP_VERSION}"
+                            value: env.APP_VERSION
                         )
                     ],
-                    wait: true
-                )
+                    wait: true,
+                    propagate: true
             }
         }
     }
 
     post {
-
         success {
-            echo """
-======================================
-CRM-DEV CI/CD SUCCESS
-======================================
-
-Application : crm-dev
-Version     : ${APP_VERSION}
-
-CI completed successfully.
-CD completed successfully.
-
-======================================
-"""
+            echo "CI/CD completed successfully."
+            echo "Deployed Version: ${env.APP_VERSION}"
         }
 
         failure {
-            echo """
-======================================
-CRM-DEV CI/CD FAILED
-======================================
-
-Application : crm-dev
-Version     : ${APP_VERSION}
-
-Check Jenkins console logs.
-
-======================================
-"""
+            echo "CI/CD pipeline failed."
+            echo "Check the failed CI or CD job."
         }
     }
 }

@@ -2,55 +2,126 @@
 
 set -e
 
-APP_VERSION="$1"
+VERSION="$1"
+DEPLOY_PATH="$2"
 
-if [ -z "$APP_VERSION" ]; then
-    echo "ERROR: APP_VERSION is required"
-    echo "Usage: $0 <version>"
+if [ -z "$VERSION" ]; then
+    echo "ERROR: Version is required."
     exit 1
 fi
 
-PROJECT_NAME="crm-dev"
-ARTIFACT_NAME="${PROJECT_NAME}-${APP_VERSION}.tar.gz"
+if [ -z "$DEPLOY_PATH" ]; then
+    DEPLOY_PATH="/opt/crm-dev"
+fi
 
-DEPLOY_PATH="/opt/crm-dev"
+ARTIFACT_NAME="crm-dev-${VERSION}.tar.gz"
 
-echo "======================================"
-echo "CRM Deployment"
-echo "======================================"
-echo "Version: $APP_VERSION"
-echo "Artifact: $ARTIFACT_NAME"
-
-# Check artifact
 if [ ! -f "$ARTIFACT_NAME" ]; then
-    echo "ERROR: Artifact not found: $ARTIFACT_NAME"
+    echo "ERROR: Artifact not found:"
+    echo "$ARTIFACT_NAME"
     exit 1
 fi
 
+echo "======================================"
+echo "Starting Deployment"
+echo "======================================"
+
+echo "Version: $VERSION"
+echo "Deploy Path: $DEPLOY_PATH"
+
+# --------------------------------------
 # Create deployment directory
+# --------------------------------------
+
 sudo mkdir -p "$DEPLOY_PATH"
 
-# Remove previous application files
-sudo rm -rf "$DEPLOY_PATH/backend"
-sudo rm -rf "$DEPLOY_PATH/frontend"
-sudo rm -rf "$DEPLOY_PATH/scripts"
+# --------------------------------------
+# Backup current deployment
+# --------------------------------------
 
-# Extract new version
-sudo tar -xzf "$ARTIFACT_NAME" -C "$DEPLOY_PATH"
+if [ -d "$DEPLOY_PATH/backend" ] || [ -d "$DEPLOY_PATH/frontend" ]; then
 
-# Restart application
+    BACKUP_DIR="/opt/crm-dev-backups"
+
+    sudo mkdir -p "$BACKUP_DIR"
+
+    TIMESTAMP=$(date +%Y%m%d%H%M%S)
+
+    echo "Creating backup..."
+
+    sudo tar \
+        --exclude='backend/venv' \
+        -czf "${BACKUP_DIR}/crm-dev-${TIMESTAMP}.tar.gz" \
+        -C "$DEPLOY_PATH" \
+        backend frontend ci-cd 2>/dev/null || true
+
+fi
+
+# --------------------------------------
+# Extract New Version
+# --------------------------------------
+
+echo "Extracting artifact..."
+
+sudo tar \
+    -xzf "$ARTIFACT_NAME" \
+    -C "$DEPLOY_PATH"
+
+# --------------------------------------
+# Python Virtual Environment
+# --------------------------------------
+
+if [ -f "$DEPLOY_PATH/backend/requirements.txt" ]; then
+
+    echo "Setting up Python virtual environment..."
+
+    if [ ! -d "$DEPLOY_PATH/backend/venv" ]; then
+        sudo python3 -m venv "$DEPLOY_PATH/backend/venv"
+    fi
+
+    sudo "$DEPLOY_PATH/backend/venv/bin/pip" install \
+        --upgrade pip
+
+    sudo "$DEPLOY_PATH/backend/venv/bin/pip" install \
+        -r "$DEPLOY_PATH/backend/requirements.txt"
+
+    echo "Python dependencies installed successfully."
+
+fi
+
+# --------------------------------------
+# Permissions
+# --------------------------------------
+
+echo "Updating ownership..."
+
+sudo chown -R ec2-user:ec2-user "$DEPLOY_PATH"
+
+# --------------------------------------
+# Restart Application
+# --------------------------------------
+
+echo "Restarting crm-dev service..."
+
+sudo systemctl daemon-reload
+
 sudo systemctl restart crm-dev
 
-# Check application
+# --------------------------------------
+# Check Service
+# --------------------------------------
+
 if sudo systemctl is-active --quiet crm-dev; then
-    echo "CRM application started successfully."
+    echo "crm-dev service is running."
 else
-    echo "ERROR: CRM application failed to start."
-    sudo systemctl status crm-dev --no-pager
+    echo "ERROR: crm-dev service failed to start."
+
+    sudo systemctl status crm-dev --no-pager || true
+
     exit 1
 fi
 
 echo "======================================"
-echo "Deployment successful"
-echo "Version: $APP_VERSION"
+echo "Deployment completed successfully."
+echo "Version: $VERSION"
 echo "======================================"

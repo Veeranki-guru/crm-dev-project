@@ -1,3 +1,4 @@
+```python
 import logging
 import os
 
@@ -12,57 +13,90 @@ from routes.products import products_bp
 from routes.orders import orders_bp
 
 
+# --------------------------------------------------
+# Base directory
+# --------------------------------------------------
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+# --------------------------------------------------
 # Create logs directory
-os.makedirs("logs", exist_ok=True)
+# --------------------------------------------------
+
+LOG_DIR = os.path.join(BASE_DIR, "logs")
+
+os.makedirs(LOG_DIR, exist_ok=True)
 
 
+# --------------------------------------------------
 # Configure logging
+# --------------------------------------------------
+
+LOG_FILE = os.path.join(LOG_DIR, "error.log")
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     handlers=[
-        logging.FileHandler(
-            "logs/error.log"
-        ),
+        logging.FileHandler(LOG_FILE),
         logging.StreamHandler()
     ]
 )
 
 
+# --------------------------------------------------
 # Create Flask application
-app = Flask(__name__)
+# --------------------------------------------------
+
+app = Flask(
+    __name__,
+    template_folder=os.path.join(BASE_DIR, "templates"),
+    static_folder=os.path.join(BASE_DIR, "static")
+)
 
 
+# --------------------------------------------------
 # Load configuration
+# --------------------------------------------------
+
 app.config.from_object(Config)
 
 
+# --------------------------------------------------
 # Initialize database
+# --------------------------------------------------
+
 init_db(app)
 
 
+# --------------------------------------------------
 # Register Blueprints
+# --------------------------------------------------
+
 app.register_blueprint(authentication_bp)
 app.register_blueprint(users_bp)
 app.register_blueprint(products_bp)
 app.register_blueprint(orders_bp)
 
 
+# --------------------------------------------------
 # Home page
+# --------------------------------------------------
+
 @app.route("/", methods=["GET"])
 def home():
-
     app.logger.info("Home page accessed")
 
-    return render_template(
-        "index.html"
-    )
+    return render_template("index.html")
 
 
+# --------------------------------------------------
 # Health check
+# --------------------------------------------------
+
 @app.route("/health", methods=["GET"])
 def health():
-
     app.logger.info("Health check requested")
 
     return jsonify({
@@ -71,18 +105,21 @@ def health():
     }), 200
 
 
+# --------------------------------------------------
 # Dashboard
+# --------------------------------------------------
+
 @app.route("/dashboard", methods=["GET"])
 def dashboard():
-
     app.logger.info("Dashboard accessed")
 
-    return render_template(
-        "dashboard.html"
-    )
+    return render_template("dashboard.html")
 
 
+# --------------------------------------------------
 # Run application
+# --------------------------------------------------
+
 if __name__ == "__main__":
 
     app.run(
@@ -90,3 +127,4 @@ if __name__ == "__main__":
         port=5000,
         debug=False
     )
+```
