@@ -1,4 +1,4 @@
-```bash
+
 #!/bin/bash
 
 set -e
@@ -91,4 +91,4 @@ echo "sudo cat /var/lib/jenkins/secrets/initialAdminPassword"
 echo ""
 echo "Installation Log:"
 echo "$LOG"
-```
+
