@@ -9,13 +9,19 @@ echo "========================================="
 echo "      Jenkins Installation Started"
 echo "========================================="
 
+# --------------------------------------------------
 # Check root privileges
+# --------------------------------------------------
+
 if [ "$(id -u)" -ne 0 ]; then
     echo "ERROR: Please run this script with sudo."
     exit 1
 fi
 
+# --------------------------------------------------
 # Validation function
+# --------------------------------------------------
+
 VALIDATE() {
     if [ "$1" -eq 0 ]; then
         echo "$2 ... SUCCESS"
@@ -26,34 +32,51 @@ VALIDATE() {
     fi
 }
 
-# Initialize log file
-touch "$LOG_FILE"
-
+# --------------------------------------------------
 # Install Java 21
+# --------------------------------------------------
+
 echo "Installing Java 21..."
 
 dnf install -y java-21-openjdk java-21-openjdk-devel >>"$LOG_FILE" 2>&1
+
 VALIDATE $? "Java 21 Installation"
 
-# Check Java version
 echo ""
 echo "Checking Java version..."
+
 java -version
 
-# Install curl if missing
+# --------------------------------------------------
+# Install curl
+# --------------------------------------------------
+
 echo ""
 echo "Checking curl..."
 
-if ! command -v curl >/dev/null 2>&1; then
+if command -v curl >/dev/null 2>&1; then
+    echo "curl already installed ... SUCCESS"
+else
     echo "Installing curl..."
 
     dnf install -y curl >>"$LOG_FILE" 2>&1
+
     VALIDATE $? "curl Installation"
-else
-    echo "curl already installed ... SUCCESS"
 fi
 
-# Add Jenkins repository
+# Verify curl
+if ! command -v curl >/dev/null 2>&1; then
+    echo "ERROR: curl is not available."
+    exit 1
+fi
+
+echo "curl version:"
+curl --version | head -n 1
+
+# --------------------------------------------------
+# Add Jenkins Repository
+# --------------------------------------------------
+
 echo ""
 echo "Adding Jenkins Repository..."
 
@@ -64,7 +87,10 @@ curl -fsSL \
 
 VALIDATE $? "Jenkins Repository"
 
-# Import Jenkins GPG key
+# --------------------------------------------------
+# Import Jenkins GPG Key
+# --------------------------------------------------
+
 echo ""
 echo "Importing Jenkins GPG Key..."
 
@@ -74,42 +100,65 @@ rpm --import \
 
 VALIDATE $? "Jenkins GPG Key"
 
-# Clean DNF cache
+# --------------------------------------------------
+# Clean DNF Cache
+# --------------------------------------------------
+
 echo ""
 echo "Cleaning DNF Cache..."
 
 dnf clean all >>"$LOG_FILE" 2>&1
+
 VALIDATE $? "DNF Cache Cleanup"
 
-# Refresh repository metadata
+# --------------------------------------------------
+# Refresh Repository Metadata
+# --------------------------------------------------
+
 echo ""
 echo "Refreshing DNF Repository Metadata..."
 
 dnf makecache >>"$LOG_FILE" 2>&1
+
 VALIDATE $? "DNF Metadata Refresh"
 
+# --------------------------------------------------
 # Install Jenkins
+# --------------------------------------------------
+
 echo ""
 echo "Installing Jenkins..."
 
 dnf install -y jenkins >>"$LOG_FILE" 2>&1
+
 VALIDATE $? "Jenkins Installation"
 
+# --------------------------------------------------
 # Enable Jenkins
+# --------------------------------------------------
+
 echo ""
 echo "Enabling Jenkins Service..."
 
 systemctl enable jenkins >>"$LOG_FILE" 2>&1
+
 VALIDATE $? "Enable Jenkins"
 
+# --------------------------------------------------
 # Start Jenkins
+# --------------------------------------------------
+
 echo ""
 echo "Starting Jenkins Service..."
 
 systemctl start jenkins >>"$LOG_FILE" 2>&1
+
 VALIDATE $? "Start Jenkins"
 
-# Check Jenkins service
+# --------------------------------------------------
+# Check Jenkins Status
+# --------------------------------------------------
+
 echo ""
 echo "Checking Jenkins Service..."
 
@@ -118,21 +167,25 @@ if systemctl is-active --quiet jenkins; then
 else
     echo "Jenkins Service ... FAILED"
     echo ""
-    echo "Check Jenkins logs with:"
-    echo "sudo journalctl -u jenkins -n 100 --no-pager"
+    echo "Jenkins Logs:"
+    journalctl -u jenkins -n 100 --no-pager
     exit 1
 fi
 
-# Check Jenkins port
-echo ""
-echo "Checking Jenkins Port..."
+# --------------------------------------------------
+# Jenkins Version
+# --------------------------------------------------
 
-if ss -lntp | grep -q ":8080"; then
-    echo "Jenkins is listening on port 8080."
-else
-    echo "WARNING: Jenkins is not listening on port 8080."
-    echo "Check Jenkins status and logs."
+echo ""
+echo "Jenkins Version:"
+
+if command -v jenkins >/dev/null 2>&1; then
+    jenkins --version || true
 fi
+
+# --------------------------------------------------
+# Final Output
+# --------------------------------------------------
 
 echo ""
 echo "========================================="
@@ -144,23 +197,15 @@ echo "Jenkins Status:"
 systemctl status jenkins --no-pager
 
 echo ""
-echo "Jenkins Version:"
-jenkins --version || true
+echo "Jenkins URL:"
+echo "http://YOUR_EC2_PUBLIC_IP:8080"
 
 echo ""
 echo "Initial Jenkins Admin Password:"
-if [ -f /var/lib/jenkins/secrets/initialAdminPassword ]; then
-    cat /var/lib/jenkins/secrets/initialAdminPassword
-else
-    echo "Password file not available yet."
-    echo "Check: /var/lib/jenkins/secrets/initialAdminPassword"
-fi
+echo "Run:"
+echo "sudo cat /var/lib/jenkins/secrets/initialAdminPassword"
 
 echo ""
-echo "Installation Log:"
+echo "Installation log:"
 echo "$LOG_FILE"
-
-echo ""
-echo "Jenkins URL:"
-echo "http://<EC2-PUBLIC-IP>:8080"
 ```
