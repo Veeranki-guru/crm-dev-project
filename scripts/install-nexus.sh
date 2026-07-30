@@ -6,10 +6,10 @@ set -e
 # Nexus Configuration
 # ============================================================
 
-NEXUS_VERSION="3.94.1-06"
+NEXUS_VERSION="3.94.0-12"     # current as of 2026-07; check https://help.sonatype.com/en/download.html for the latest
 NEXUS_USER="nexus"
 NEXUS_HOME="/opt/nexus"
-NEXUS_TAR="nexus-${NEXUS_VERSION}-unix.tar.gz"
+NEXUS_TAR="nexus-${NEXUS_VERSION}-linux-x86_64.tar.gz"
 NEXUS_URL="https://download.sonatype.com/nexus/3/${NEXUS_TAR}"
 
 echo "=========================================="
@@ -79,6 +79,23 @@ if [ ! -f "/opt/$NEXUS_TAR" ]; then
 fi
 
 echo "Nexus download successful."
+
+# ============================================================
+# 5b. Verify checksum (optional but recommended)
+# ============================================================
+
+echo "Verifying SHA256 checksum..."
+sudo wget -q -O "${NEXUS_TAR}.sha256" "${NEXUS_URL}.sha256"
+EXPECTED_SUM=$(awk '{print $1}' "${NEXUS_TAR}.sha256")
+ACTUAL_SUM=$(sha256sum "/opt/$NEXUS_TAR" | awk '{print $1}')
+
+if [ "$EXPECTED_SUM" != "$ACTUAL_SUM" ]; then
+    echo "ERROR: Checksum mismatch for $NEXUS_TAR"
+    echo "Expected: $EXPECTED_SUM"
+    echo "Actual:   $ACTUAL_SUM"
+    exit 1
+fi
+echo "Checksum verified."
 
 # ============================================================
 # 6. Extract Nexus
