@@ -9,7 +9,7 @@ curl -s \
   "http://localhost:9000/api/qualitygates/project_status?projectKey=crm-dev" \
   > quality-gate.json
 
-STATUS=$(grep -o '"status":"[^"]*"' quality-gate.json | head -1 | cut -d'"' -f4)
+STATUS=$(python3 -c "import json; print(json.load(open('quality-gate.json'))['projectStatus']['status'])")
 
 echo "Quality Gate Status: $STATUS"
 
