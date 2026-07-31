@@ -18,7 +18,7 @@ echo "========================================="
 echo "      Source Code Checkout Started"
 echo "========================================="
 
-REPO_URL="https://github.com/veerankirajesh/crm-dev.git"
+REPO_URL="https://github.com/Veeranki-guru/crm-dev-project.git"
 PROJECT_DIR="/opt/crm-dev"
 
 # Install Git if missing
