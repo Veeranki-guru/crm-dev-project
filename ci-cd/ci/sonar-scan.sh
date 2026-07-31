@@ -2,6 +2,8 @@
 
 set -e
 
+export PATH=$PATH:/opt/sonar-scanner/bin
+
 echo "Starting SonarQube scan..."
 
 sonar-scanner \
