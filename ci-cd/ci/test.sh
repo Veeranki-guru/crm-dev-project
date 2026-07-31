@@ -6,7 +6,7 @@ echo "=========================================="
 echo "Running Python QA Tests"
 echo "=========================================="
 
-cd backend
+cd ../../backend
 
 if [ ! -d "venv" ]; then
     echo "ERROR: Python virtual environment not found."
