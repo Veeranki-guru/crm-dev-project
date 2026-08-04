@@ -3,10 +3,6 @@
 set -e
 
 VERSION="$1"
-NEXUS_URL="$2"
-NEXUS_REPOSITORY="$3"
-NEXUS_USER="$4"
-NEXUS_PASSWORD="$5"
 
 if [ -z "$VERSION" ]; then
     echo "ERROR: Version is required."
@@ -28,7 +24,9 @@ if [ -z "$NEXUS_USER" ] || [ -z "$NEXUS_PASSWORD" ]; then
     exit 1
 fi
 
-ARTIFACT_NAME="crm-dev-${VERSION}.tar.gz"
+
+PROJECT_NAME="crm-dev"
+ARTIFACT_NAME="${PROJECT_NAME}-${VERSION}.tar.gz"
 
 DOWNLOAD_URL="${NEXUS_URL}/repository/${NEXUS_REPOSITORY}/${ARTIFACT_NAME}"
 
@@ -36,25 +34,32 @@ echo "======================================"
 echo "Downloading Artifact"
 echo "======================================"
 
-echo "Version: $VERSION"
-echo "Artifact: $ARTIFACT_NAME"
-echo "Repository: $NEXUS_REPOSITORY"
+echo "Version      : ${VERSION}"
+echo "Artifact     : ${ARTIFACT_NAME}"
+echo "Repository   : ${NEXUS_REPOSITORY}"
+echo "Download URL : ${DOWNLOAD_URL}"
 
-rm -f "$ARTIFACT_NAME"
+
+rm -f "${ARTIFACT_NAME}"
+
 
 curl \
-    --fail \
-    --show-error \
-    --location \
-    --user "${NEXUS_USER}:${NEXUS_PASSWORD}" \
-    --output "$ARTIFACT_NAME" \
-    "$DOWNLOAD_URL"
+--fail \
+--show-error \
+--location \
+--user "${NEXUS_USER}:${NEXUS_PASSWORD}" \
+--output "${ARTIFACT_NAME}" \
+"${DOWNLOAD_URL}"
 
-if [ ! -s "$ARTIFACT_NAME" ]; then
+
+if [ ! -s "${ARTIFACT_NAME}" ]; then
     echo "ERROR: Artifact download failed."
     exit 1
 fi
 
-echo "Artifact downloaded successfully."
 
-ls -lh "$ARTIFACT_NAME"
+echo "======================================"
+echo "Artifact downloaded successfully"
+echo "======================================"
+
+ls -lh "${ARTIFACT_NAME}"
