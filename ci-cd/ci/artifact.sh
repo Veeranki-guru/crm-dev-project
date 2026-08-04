@@ -16,16 +16,29 @@ if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     exit 1
 fi
 
+
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 cd "$PROJECT_ROOT"
 
+
 ARTIFACT_NAME="crm-dev-${VERSION}.tar.gz"
 
-echo "Creating artifact:"
+
+echo "======================================"
+echo "Creating Artifact"
+echo "======================================"
+
+echo "Artifact Name:"
 echo "$ARTIFACT_NAME"
 
+
+# Remove old artifact
+
 rm -f "$ARTIFACT_NAME"
+
+
+# Create new artifact
 
 tar \
     --exclude='.git' \
@@ -34,6 +47,8 @@ tar \
     --exclude='.env.*' \
     --exclude='backend/venv' \
     --exclude='backend/venv/*' \
+    --exclude='frontend/venv' \
+    --exclude='frontend/venv/*' \
     --exclude='__pycache__' \
     --exclude='*/__pycache__/*' \
     --exclude='*.pyc' \
@@ -45,10 +60,34 @@ tar \
     frontend \
     ci-cd
 
+
+echo ""
 echo "Artifact created successfully."
 
+
+echo ""
 echo "Artifact details:"
 ls -lh "$ARTIFACT_NAME"
 
+
+echo ""
 echo "Artifact contents:"
 tar -tzf "$ARTIFACT_NAME" | head -50
+
+
+echo ""
+echo "Checking virtual environments..."
+
+if tar -tzf "$ARTIFACT_NAME" | grep -q "venv"; then
+    echo "ERROR: venv found inside artifact"
+    exit 1
+else
+    echo "SUCCESS: No venv found inside artifact"
+fi
+
+
+echo ""
+echo "======================================"
+echo "Artifact Build Completed"
+echo "Version: $VERSION"
+echo "======================================"
