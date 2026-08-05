@@ -11,7 +11,7 @@ if [ -z "$VERSION" ]; then
 fi
 
 if [ -z "$DEPLOY_PATH" ]; then
-    DEPLOY_PATH="/opt/crm-dev"
+    DEPLOY_PATH="/var/www/crm-dev"
 fi
 
 ARTIFACT_NAME="crm-dev-${VERSION}.tar.gz"
@@ -41,7 +41,7 @@ sudo mkdir -p "$DEPLOY_PATH"
 
 if [ -d "$DEPLOY_PATH/backend" ] || [ -d "$DEPLOY_PATH/frontend" ]; then
 
-    BACKUP_DIR="/opt/crm-dev-backups"
+    BACKUP_DIR="/var/www/backups"
 
     sudo mkdir -p "$BACKUP_DIR"
 
